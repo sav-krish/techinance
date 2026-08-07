@@ -186,18 +186,6 @@
   object-fit: cover;
 }
 
-.person__placeholder {
-  display: grid;
-  width: 46%;
-  place-items: center;
-  color: var(--steel);
-}
-
-.person__placeholder svg {
-  width: 100%;
-  height: auto;
-}
-
 .person__name {
   margin: 14px 4px 0;
   color: var(--navy);

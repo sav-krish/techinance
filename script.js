@@ -726,6 +726,130 @@ function startCounters() {
 }
 
 /* ------------------------------------------------------------------ *
+ * Scroll story
+ * ------------------------------------------------------------------ */
+
+const scrollStory = document.querySelector("[data-scroll-story]");
+
+/**
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * @param {number} start
+ * @param {number} end
+ * @param {number} progress
+ * @returns {number}
+ */
+function interpolate(start, end, progress) {
+  return start + (end - start) * progress;
+}
+
+/**
+ * Enables the sticky, scroll-driven home-page scene. The regular grid remains
+ * visible when motion is reduced or JavaScript is unavailable.
+ *
+ * @returns {void}
+ */
+function setupScrollStory() {
+  if (!(scrollStory instanceof HTMLElement)) {
+    return;
+  }
+  if (
+    typeof window.matchMedia !== "function" ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    !window.matchMedia("(min-width: 721px)").matches
+  ) {
+    return;
+  }
+  const story = scrollStory;
+
+  let frame = 0;
+
+  /**
+   * @param {string} name
+   * @param {number} x
+   * @param {number} y
+   * @param {number} rotation
+   * @param {number} scale
+   * @returns {void}
+   */
+  function setOrbit(name, x, y, rotation, scale) {
+    story.style.setProperty(
+      `--story-${name}-transform`,
+      `translate3d(${x.toFixed(2)}vw, ${y.toFixed(2)}vh, 0) rotate(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
+    );
+  }
+
+  /**
+   * @returns {void}
+   */
+  function update() {
+    frame = 0;
+    const viewport = window.innerHeight || 1;
+    const bounds = story.getBoundingClientRect();
+    const travel = Math.max(story.offsetHeight - viewport, 1);
+    const progress = clamp(-bounds.top / travel, 0, 1);
+    const eased = 1 - (1 - progress) ** 3;
+
+    story.style.setProperty(
+      "--story-panel-transform",
+      `translate3d(0, ${interpolate(0, -3.5, eased).toFixed(2)}vh, 0) scale(${interpolate(1, 1.055, eased).toFixed(3)})`,
+    );
+    setOrbit(
+      "tech",
+      interpolate(0, -27, eased),
+      interpolate(14, -15, eased),
+      interpolate(-3, -9, eased),
+      interpolate(0.88, 1, eased),
+    );
+    setOrbit(
+      "finance",
+      interpolate(0, 28, eased),
+      interpolate(14, -9, eased),
+      interpolate(3, 8, eased),
+      interpolate(0.88, 1, eased),
+    );
+    setOrbit(
+      "neuro",
+      interpolate(0, 0, eased),
+      interpolate(14, 24, eased),
+      interpolate(0, -2, eased),
+      interpolate(0.88, 1, eased),
+    );
+    story.style.setProperty("--story-tech-opacity", String(clamp(progress * 3.2, 0, 1)));
+    story.style.setProperty("--story-finance-opacity", String(clamp((progress - 0.06) * 3.2, 0, 1)));
+    story.style.setProperty("--story-neuro-opacity", String(clamp((progress - 0.12) * 3.2, 0, 1)));
+    story.style.setProperty(
+      "--story-partnership-opacity",
+      String(clamp((progress - 0.42) * 2.2, 0, 1)),
+    );
+  }
+
+  /**
+   * @returns {void}
+   */
+  function requestUpdate() {
+    if (frame === 0) {
+      frame = window.requestAnimationFrame(update);
+    }
+  }
+
+  update();
+  story.classList.add("scroll-story--enhanced");
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+}
+
+setupScrollStory();
+
+/* ------------------------------------------------------------------ *
  * Intro playback
  * ------------------------------------------------------------------ */
 
