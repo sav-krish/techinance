@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * Get Involved form.
+ * Work with Us form.
  *
  * Submits through FormSubmit, the same relay contact.js uses, so both forms
  * reach the same inbox. If that request fails the person still gets a prefilled
@@ -160,7 +160,7 @@ const checks = [
   {
     control: roleSelect,
     errorEl: getHtmlElement("#involve-role-error"),
-    validate: () => (roleSelect.value === "" ? "Pick how you'd like to get involved." : ""),
+    validate: () => (roleSelect.value === "" ? "Choose how you'd like to work with us." : ""),
   },
 ];
 
@@ -237,11 +237,11 @@ function runChecks() {
  * @returns {string}
  */
 function buildMailto(firstName, lastName, email, role, message) {
-  const subject = `Get Involved: ${role}`;
+  const subject = `Work with Us: ${role}`;
   const lines = [
     `Name: ${firstName} ${lastName}`,
     `Email: ${email}`,
-    `How I want to get involved: ${role}`,
+    `How I want to work with Techinance: ${role}`,
     "",
     message === "" ? "(No extra details.)" : message,
   ];
@@ -338,7 +338,7 @@ form.addEventListener("submit", async (event) => {
         email,
         role,
         message,
-        _subject: `Techinance Get Involved from ${firstName} ${lastName}`,
+        _subject: `Techinance Work with Us from ${firstName} ${lastName}`,
         _replyto: email,
         _captcha: "false",
       }),

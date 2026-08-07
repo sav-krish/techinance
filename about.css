@@ -186,6 +186,22 @@
   object-fit: cover;
 }
 
+.person__image--krish {
+  object-position: 50% 35%;
+}
+
+.person__image--alan {
+  object-position: 60% 50%;
+}
+
+.person__image--priyal {
+  object-position: 50% 50%;
+}
+
+.person__image--xianyao {
+  object-position: 50% 62%;
+}
+
 .person__name {
   margin: 14px 4px 0;
   color: var(--navy);
@@ -233,7 +249,7 @@
   margin: 0;
   color: var(--navy);
   font-family: "Nunito", sans-serif;
-  font-size: clamp(28px, 4vw, 40px);
+  font-size: clamp(36px, 5vw, 56px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;

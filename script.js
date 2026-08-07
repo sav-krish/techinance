@@ -841,8 +841,8 @@ function setupScrollStory() {
     }
   }
 
-  update();
   story.classList.add("scroll-story--enhanced");
+  update();
   window.addEventListener("scroll", requestUpdate, { passive: true });
   window.addEventListener("resize", requestUpdate);
 }

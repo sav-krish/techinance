@@ -115,7 +115,7 @@ is the one course with no verbatim quiz match enforced. Transcribe them into
 
 The old **Donate** button is gone from all seven marketing pages. In its place the
 header carries an auth control (`Sign in`, which becomes an avatar menu once you're
-in), the mobile menu links to **My Learning**, and the footer's Get Involved column
+in), the mobile menu links to **My Learning**, and the footer's Work with Us column
 links to **Story Mode**.
 
 ## Turning on Google Sign-In

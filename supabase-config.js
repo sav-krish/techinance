@@ -76,14 +76,13 @@
  * Project URL, e.g. "https://abcdefghijklm.supabase.co". No trailing slash.
  * @type {string}
  */
-export const SUPABASE_URL = "https://qkkuyfewwfsryseopqte.supabase.co";
+export const SUPABASE_URL = "https://olzrznsctcqujtmhczjh.supabase.co";
 
 /**
- * The "anon public" key. Safe to commit. Never the service_role key.
+ * The public client key. Safe to commit. Never the service_role key.
  * @type {string}
  */
-export const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFra3V5ZmV3d2ZzcnlzZW9wcXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMzExODYsImV4cCI6MjEwMTYwNzE4Nn0.z5Kj0XWbudVENt7ENT7uj2kah88NRraAN7AIPma1hRQ";
+export const SUPABASE_ANON_KEY = "sb_publishable_1ukz0dX9htcBpE4JnAeVSw_i1Jmedw8";
 
 /**
  * True when both values are filled in. Everything Supabase-related checks this
