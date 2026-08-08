@@ -202,6 +202,10 @@
   object-position: 50% 62%;
 }
 
+.person__image--olivia {
+  object-position: 50% 56%;
+}
+
 .person__name {
   margin: 14px 4px 0;
   color: var(--navy);
