@@ -302,25 +302,6 @@
   color: var(--story-bad);
 }
 
-/* Google Identity button holder + the "not configured" note. */
-.auth-google-slot {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-google-slot > div {
-  max-width: 100%;
-}
-
-.auth-note {
-  margin: 0;
-  color: var(--slate);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
 /* Auth control inside the mobile drawer. */
 .mobile-nav .auth-slot,
 .mobile-nav .auth-nav {
@@ -482,26 +463,6 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 12px;
-}
-
-.learn-signin__divider {
-  display: flex;
-  width: min(320px, 100%);
-  align-items: center;
-  gap: 12px;
-  color: var(--slate);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.learn-signin__divider::before,
-.learn-signin__divider::after {
-  height: 1px;
-  flex: 1 1 auto;
-  background: var(--learn-line-strong);
-  content: "";
 }
 
 /* Signed-in summary ----------------------------------------------------- */
@@ -1190,29 +1151,35 @@
   text-align: center;
 }
 
-.learn-signin__google {
-  display: flex;
-  width: 100%;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-}
-
-.learn-signin__divider {
-  display: flex;
+.learn-signin__form {
   width: 100%;
   margin: 0;
-  align-items: center;
-  gap: 12px;
-  color: var(--slate);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
 }
 
-.learn-signin__guest {
-  width: min(280px, 100%);
+.learn-signin__form .contact__field {
+  text-align: left;
+}
+
+.learn-signin__form .contact__field em {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.learn-signin__form .contact__status {
+  min-height: 1.45em;
+  text-align: center;
+}
+
+.learn-signin__form .button,
+.learn-signin > .button--secondary {
+  width: 100%;
+  justify-self: stretch;
+  justify-content: center;
 }
 
 .learn-signin__note {

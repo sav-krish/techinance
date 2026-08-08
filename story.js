@@ -4,10 +4,10 @@
  * Boots the Story Mode player in story.html.
  *
  * Reads `?episode=` from the URL, looks it up in the registry, requires a
- * signed-in (or guest) user, and hands the rest over to the story engine.
+ * signed-in learner, and hands the rest over to the story engine.
  */
 
-import { getUser, initAuth, onAuthChange } from "./auth.js";
+import { getUser, initAuth, onAuthChange, whenAuthReady } from "./auth.js";
 import { episode as cyberUnit1 } from "./content/cyber-unit1.js";
 import { episode as cyberUnit2 } from "./content/cyber-unit2.js";
 import { episode as cyberUnit3 } from "./content/cyber-unit3.js";
@@ -105,7 +105,15 @@ startProgressSync();
 
 const root = pick("#story-root");
 
-if (root) {
+async function bootStory() {
+  if (!root) {
+    return;
+  }
+
+  // A remembered Supabase session is restored asynchronously. Wait before
+  // deciding whether this protected page should send the learner to sign in.
+  await whenAuthReady();
+
   const requested = new URLSearchParams(window.location.search).get("episode");
   const episodeId = requested && requested.trim() !== "" ? requested.trim() : DEFAULT_EPISODE_ID;
   const episode = Object.prototype.hasOwnProperty.call(EPISODES, episodeId)
@@ -143,3 +151,5 @@ if (root) {
     });
   }
 }
+
+void bootStory();

@@ -6,6 +6,7 @@ dist/
 .env
 .env.*
 !.env.example
+supabase/.temp/
 
 # This project uses pnpm. A stray npm lockfile drifts from pnpm-lock.yaml.
 package-lock.json

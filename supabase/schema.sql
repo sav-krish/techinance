@@ -6,16 +6,17 @@
 -- error.
 --
 -- WHAT THIS SETS UP
---   profiles          one row per signed-in learner: display name and avatar
+--   profiles          one row per signed-in learner: private display settings
 --   episode_progress  one row per learner per episode: XP, completion, checkpoint
 --   earned_badges     one row per learner per badge
---   leaderboard()     an aggregate every signed-in learner may read
+--   leaderboard()     an opt-in aggregate every signed-in learner may read
 --
 -- Row Level Security is ON for all three tables, and the policies are strict:
 -- a learner can read and write ONLY their own rows. Nobody can read anyone
 -- else's raw progress. The leaderboard is exposed through a SECURITY DEFINER
--- function instead, which returns aggregates and display names and nothing else.
--- That is the whole point: a leaderboard should reveal a score, not a history.
+-- function instead, which returns only the aggregate information a learner has
+-- deliberately chosen to publish. That is the whole point: a leaderboard should
+-- reveal a score, not an identity or a history.
 
 -- ---------------------------------------------------------------------------
 -- 1. Profiles
@@ -24,9 +25,24 @@
 create table if not exists public.profiles (
   id           uuid primary key references auth.users on delete cascade,
   display_name text not null default 'Learner',
-  avatar_url   text,
+  -- A learner is private by default. A future profile setting may opt in to
+  -- appearing in the aggregate leaderboard.
+  leaderboard_visible boolean not null default false,
   updated_at   timestamptz not null default now()
 );
+
+-- These statements make the migration safe for a project that already has the
+-- original profile table. Old profiles become private until their owner makes
+-- an explicit choice to be visible.
+alter table public.profiles
+  add column if not exists leaderboard_visible boolean not null default false;
+
+alter table public.profiles
+  alter column display_name set default 'Learner';
+
+update public.profiles
+  set leaderboard_visible = false
+  where leaderboard_visible is distinct from false;
 
 alter table public.profiles enable row level security;
 
@@ -46,9 +62,15 @@ create policy "update own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- Create the profile row automatically the first time someone signs in, using
--- whatever name Google handed over. Doing it here rather than in the browser
--- means a learner always has a profile even if they close the tab immediately.
+-- RLS is the primary protection, and explicit table privileges make the
+-- anonymous boundary clear even if a future policy is added incorrectly.
+revoke all on table public.profiles from public, anon, authenticated;
+grant select, insert, update on table public.profiles to authenticated;
+
+-- Create the profile row automatically when an account is created. The display
+-- name is a learner-chosen alias, never a name inferred from their email. Doing
+-- it here rather than in the browser means a learner always has a private
+-- profile even if they close the tab immediately.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -56,15 +78,14 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name, avatar_url)
+  insert into public.profiles (id, display_name, leaderboard_visible)
   values (
     new.id,
     coalesce(
-      nullif(new.raw_user_meta_data ->> 'full_name', ''),
-      nullif(new.raw_user_meta_data ->> 'name', ''),
-      split_part(coalesce(new.email, 'learner@example.com'), '@', 1)
+      nullif(left(trim(new.raw_user_meta_data ->> 'display_name'), 32), ''),
+      'Learner'
     ),
-    new.raw_user_meta_data ->> 'avatar_url'
+    false
   )
   on conflict (id) do nothing;
   return new;
@@ -75,6 +96,20 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- This function is invoked only by the auth.users trigger. It must never be
+-- exposed as a browser-callable RPC endpoint.
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+
+-- Some older projects include this maintenance event-trigger function. It is
+-- unrelated to the app and should not be callable through the public API.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    execute 'revoke all on function public.rls_auto_enable() from public, anon, authenticated';
+  end if;
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Episode progress
@@ -116,6 +151,9 @@ create policy "delete own progress"
   on public.episode_progress for delete
   using (auth.uid() = user_id);
 
+revoke all on table public.episode_progress from public, anon, authenticated;
+grant select, insert, update, delete on table public.episode_progress to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- 3. Badges
 -- ---------------------------------------------------------------------------
@@ -144,21 +182,26 @@ create policy "delete own badges"
   on public.earned_badges for delete
   using (auth.uid() = user_id);
 
+revoke all on table public.earned_badges from public, anon, authenticated;
+grant select, insert, delete on table public.earned_badges to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- 4. The leaderboard
 -- ---------------------------------------------------------------------------
 
 -- SECURITY DEFINER so it can read across users despite the strict policies
--- above. It returns only what a leaderboard needs: a name, a picture, and three
--- totals. No scene history, no email address, no timestamps.
+-- above. It returns only what an opt-in leaderboard needs: an alias and three
+-- totals. No profile photo, email address, scene history, or timestamps.
 --
 -- `set search_path = public` matters on a SECURITY DEFINER function: without it
 -- a caller could shadow the table names and have this run against their own.
-create or replace function public.leaderboard(limit_count integer default 50)
+-- Drop first because PostgreSQL cannot change a function's returned table shape
+-- with CREATE OR REPLACE alone.
+drop function if exists public.leaderboard(integer);
+create function public.leaderboard(limit_count integer default 50)
 returns table (
-  user_id      uuid,
+  is_current_user boolean,
   display_name text,
-  avatar_url   text,
   xp           integer,
   badges       integer,
   episodes     integer
@@ -169,18 +212,18 @@ set search_path = public
 stable
 as $$
   select
-    p.id,
+    p.id = auth.uid(),
     p.display_name,
-    p.avatar_url,
     coalesce(sum(e.xp), 0)::integer                                as xp,
     (select count(*) from public.earned_badges b
       where b.user_id = p.id)::integer                             as badges,
     count(e.episode_id) filter (where e.completed)::integer        as episodes
   from public.profiles p
   left join public.episode_progress e on e.user_id = p.id
-  group by p.id, p.display_name, p.avatar_url
+  where p.leaderboard_visible = true
+  group by p.id, p.display_name
   having coalesce(sum(e.xp), 0) > 0
-  order by xp desc, badges desc, episodes desc, p.display_name asc
+  order by xp desc, badges desc, episodes desc, p.display_name asc, p.id asc
   limit greatest(1, least(coalesce(limit_count, 50), 200));
 $$;
 
@@ -192,9 +235,10 @@ grant execute on function public.leaderboard(integer) to authenticated;
 -- 5. Wiping your own progress
 -- ---------------------------------------------------------------------------
 
--- The profile page has a "reset my progress" control. The delete policies above
--- already allow it, but doing it in one call keeps the client simple and the
--- two tables consistent.
+-- The profile page has a "reset my progress" control. It resets lesson state
+-- and XP while keeping earned badges, matching the profile page's promise.
+-- The delete policies above already allow it, but doing it in one call keeps
+-- the learner's devices in sync.
 create or replace function public.reset_my_progress()
 returns void
 language sql
@@ -202,7 +246,6 @@ security invoker
 set search_path = public
 as $$
   delete from public.episode_progress where user_id = auth.uid();
-  delete from public.earned_badges   where user_id = auth.uid();
 $$;
 
 revoke all on function public.reset_my_progress() from public, anon;

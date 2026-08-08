@@ -96,12 +96,12 @@ RUNWAY terminal. Fourth course, fourth cast.
 | 5 | Funding, Grants and Competitions | not written | | | |
 | 6 | Wrap-Up and Founder Portfolio | not written | | | |
 
-This course's lessons are **public Netlify slide decks**, not Google Docs. All
-six deck URLs and the extraction recipe are in
+This course's lessons are **public Netlify slide decks**, not editable document
+pages. All six deck URLs and the extraction recipe are in
 `content/sources/startup-modules/README.md`. Every deck follows the same twelve
 slide shape, which maps cleanly onto three acts.
 
-Its quizzes are 5-question Google Forms and are **not transcribed yet**, so this
+Its quizzes are 5-question hosted forms and are **not transcribed yet**, so this
 is the one course with no verbatim quiz match enforced. Transcribe them into
 `content/sources/startup-modules/` and add a test alongside
 `test/neuro-quiz.test.js` to bring it to the same bar as the others.
@@ -118,31 +118,31 @@ header carries an auth control (`Sign in`, which becomes an avatar menu once you
 in), the mobile menu links to **My Learning**, and the footer's Work with Us column
 links to **Story Mode**.
 
-## Turning on Google Sign-In
+## Accounts and privacy
 
-Sign-in works today in **guest mode** with no configuration. To enable Google:
+Story Mode uses a first-party Techinance email-and-password account backed by
+Supabase Auth. Passwords are processed by Supabase Auth and are never stored in
+the site code, Story Mode progress records, or the browser's progress cache.
+Supabase persists a session token so learners stay signed in, while a local
+progress cache keeps lessons responsive on unreliable connections.
 
-1. Follow the steps documented at the top of `auth-config.js`.
-2. Paste the client ID into `GOOGLE_CLIENT_ID`.
+The database uses Row Level Security. A learner can read and modify only their
+own profile, progress, and badges. The optional leaderboard uses a dedicated
+database function that exposes only a learner-chosen alias and aggregate totals
+for accounts that explicitly opt in. Email addresses, profile photos, answers,
+and scene history are never returned by it.
 
-Nothing else changes. With an empty client ID the Google button is replaced by a
-short "not configured" note, and guest mode carries on working.
-
-> **This is identity, not security.** Sign-in happens entirely in the browser: the
-> Google ID token is decoded client-side and never verified by a server, and progress
-> lives in `localStorage`. That's the right trade-off for gating free learning content
-> and remembering where someone left off. Don't put anything behind it that actually
-> needs protecting, because anyone can edit `localStorage`.
-
-Guest progress is stored under the user id `guest`; Google users get `google-<sub>`,
-so the two never collide on a shared device.
+Keep one-time email confirmation enabled for new accounts. It proves the email
+address belongs to the person creating the account without requiring a
+confirmation email for each ordinary password sign-in. See
+[`SUPABASE.md`](SUPABASE.md) for project configuration and password policy.
 
 ## Architecture
 
 ```
-auth.js          Google Identity Services + guest fallback + header control
-auth-config.js   GOOGLE_CLIENT_ID (public by design; never a client *secret*)
-progress.js      localStorage XP / badges / per-scene state / checkpoints
+auth.js          First-party account session state and header control
+supabase.js      Supabase Auth plus private progress sync and leaderboard RPC
+progress.js      Local XP / badges / per-scene state / checkpoints cache
 story-engine.js  Renders the nine scene types, HUD, resume gate
 icon.js          Inline lucide SVG icons for dynamically built DOM
 learn.js         Drives the hub

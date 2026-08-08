@@ -2,7 +2,7 @@
  * About page.
  *
  * Loaded after styles.css and learn.css. Namespaced under .about, .mission,
- * .people and .reach.
+ * .people.
  */
 
 .about {
@@ -227,44 +227,6 @@
   line-height: 1.55;
 }
 
-/* Reach --------------------------------------------------------------------- */
-
-.about__block--stats {
-  border-top: 0;
-  padding-top: clamp(28px, 4vw, 40px);
-  background: var(--soft-surface);
-}
-
-.reach {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
-  text-align: center;
-}
-
-.reach__value {
-  margin: 0;
-  color: var(--navy);
-  font-family: "Nunito", sans-serif;
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.reach__label {
-  margin: 8px 0 0;
-  color: var(--slate);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 /* Responsive ---------------------------------------------------------------- */
 
 @media (max-width: 860px) {
@@ -295,10 +257,6 @@
     font-size: 17px;
   }
 
-  .reach {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 26px 20px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

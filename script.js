@@ -819,7 +819,7 @@ function setupScrollStory() {
     setOrbit(
       "neuro",
       interpolate(0, 0, eased),
-      interpolate(14, 24, eased),
+      interpolate(18, 38, eased),
       interpolate(0, -2, eased),
       interpolate(0.88, 1, eased),
     );

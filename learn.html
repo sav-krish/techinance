@@ -146,25 +146,69 @@
                 </span>
                 <span
                   ><strong>Pick up where you left off.</strong> Your checkpoint is saved on
-                  this device.</span
+                  your private account.</span
                 >
               </li>
             </ul>
           </div>
 
-          <div class="learn-signin">
-            <p class="eyebrow">Account</p>
-            <h3 class="learn-signin__title">Sign In to Save Your Progress</h3>
-            <div class="learn-signin__google" data-google-button></div>
-            <p class="learn-signin__divider"><span>or</span></p>
-            <button
-              class="button button--secondary learn-signin__guest"
-              type="button"
-              data-guest-button
-            >
-              Continue as guest
+          <div class="learn-signin" data-account-panel>
+            <p class="eyebrow">Techinance account</p>
+            <h3 class="learn-signin__title" data-account-title>Sign In to Save Your Progress</h3>
+            <p class="learn-signin__note" data-account-description>
+              Sign in to continue securely across your devices.
+            </p>
+            <form class="contact__form learn-signin__form" data-account-form novalidate>
+              <label class="contact__field" data-display-name-field hidden>
+                <span>Display name</span>
+                <input
+                  type="text"
+                  name="display-name"
+                  autocomplete="nickname"
+                  maxlength="32"
+                  data-account-display-name
+                  aria-describedby="display-name-help"
+                />
+                <em id="display-name-help">Choose a nickname, not your full name or email.</em>
+              </label>
+              <label class="contact__field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  name="email"
+                  autocomplete="email"
+                  maxlength="254"
+                  required
+                  data-account-email
+                />
+              </label>
+              <label class="contact__field">
+                <span>Password</span>
+                <input
+                  type="password"
+                  name="password"
+                  autocomplete="current-password"
+                  minlength="12"
+                  required
+                  data-account-password
+                  aria-describedby="password-help"
+                />
+                <em id="password-help" data-password-help>
+                  At least 12 characters, with upper- and lowercase letters, a number, and a symbol.
+                </em>
+              </label>
+              <p class="contact__status" data-account-status role="status" aria-live="polite"></p>
+              <button class="button button--primary" type="submit" data-account-submit>Sign in</button>
+            </form>
+            <button class="button button--secondary" type="button" data-account-mode-toggle>
+              Need an account? Create one
             </button>
-            <p class="learn-signin__note">Guest progress stays in this browser.</p>
+            <p class="learn-signin__note">
+              Your password is handled by Supabase Auth and is never stored in Techinance website code or progress records.
+            </p>
+            <p class="learn-signin__note">
+              You only need to confirm your email when creating an account, never during an ordinary sign-in.
+            </p>
           </div>
         </div>
       </section>

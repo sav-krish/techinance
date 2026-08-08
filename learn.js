@@ -5,7 +5,7 @@
  *
  * Responsibilities:
  *   - toggle the signed-out / signed-in panels from `onAuthChange`
- *   - mount the Google button and wire "Continue as guest" / "Sign out"
+ *   - create and sign in private Techinance password accounts
  *   - render total XP, badges, and per-episode progress from progress.js
  *   - handle `?course=<slug>` deep links from courses.html, which drop a signed-in
  *     visitor straight onto that course's episodes
@@ -16,10 +16,10 @@
  */
 
 import {
+  createAccount,
   initAuth,
-  mountGoogleButton,
   onAuthChange,
-  signInAsGuest,
+  signIn,
   signOut,
 } from "./auth.js";
 import { icon, iconMarkup } from "./icon.js";
@@ -413,9 +413,7 @@ function renderIdentity(user) {
 
   const meta = pick("[data-user-meta]");
   if (meta) {
-    meta.textContent = user.guest
-      ? "Guest session · progress saved on this device only"
-      : user.email;
+    meta.textContent = user.email;
   }
 }
 
@@ -577,17 +575,177 @@ function render(user) {
 /** @type {User | null} */
 let currentUser = null;
 
-const googleSlot = pick("[data-google-button]");
-if (googleSlot) {
-  mountGoogleButton(googleSlot);
+/* ------------------------------------------------------------------ */
+/* account form                                                        */
+/* ------------------------------------------------------------------ */
+
+/** @type {"signin" | "signup"} */
+let accountMode = "signin";
+
+const accountForm = document.querySelector("[data-account-form]");
+const accountModeToggle = pick("[data-account-mode-toggle]");
+const accountTitle = pick("[data-account-title]");
+const accountDescription = pick("[data-account-description]");
+const displayNameField = pick("[data-display-name-field]");
+const displayNameInput = document.querySelector("[data-account-display-name]");
+const emailInput = document.querySelector("[data-account-email]");
+const passwordInput = document.querySelector("[data-account-password]");
+const accountStatus = pick("[data-account-status]");
+const accountSubmit = document.querySelector("[data-account-submit]");
+
+/**
+ * @param {string} message
+ * @param {boolean} [isError]
+ * @returns {void}
+ */
+function setAccountStatus(message, isError = false) {
+  if (!accountStatus) {
+    return;
+  }
+  accountStatus.textContent = message;
+  accountStatus.classList.toggle("is-error", isError);
 }
 
-const guestButton = pick("[data-guest-button]");
-if (guestButton instanceof HTMLButtonElement) {
-  guestButton.addEventListener("click", () => {
-    signInAsGuest();
+/**
+ * @param {"signin" | "signup"} mode
+ * @returns {void}
+ */
+function setAccountMode(mode) {
+  accountMode = mode;
+  const creating = mode === "signup";
+  if (accountTitle) {
+    accountTitle.textContent = creating ? "Create Your Techinance Account" : "Sign In to Save Your Progress";
+  }
+  if (accountDescription) {
+    accountDescription.textContent = creating
+      ? "Create a private account to save your learning across devices."
+      : "Sign in to continue securely across your devices.";
+  }
+  if (displayNameField) {
+    displayNameField.hidden = !creating;
+  }
+  if (displayNameInput instanceof HTMLInputElement) {
+    displayNameInput.required = creating;
+  }
+  if (passwordInput instanceof HTMLInputElement) {
+    passwordInput.autocomplete = creating ? "new-password" : "current-password";
+  }
+  if (accountSubmit instanceof HTMLButtonElement) {
+    accountSubmit.textContent = creating ? "Create account" : "Sign in";
+  }
+  if (accountModeToggle instanceof HTMLButtonElement) {
+    accountModeToggle.textContent = creating ? "Already have an account? Sign in" : "Need an account? Create one";
+    accountModeToggle.setAttribute("aria-pressed", String(creating));
+  }
+  setAccountStatus("");
+}
+
+/**
+ * @param {string} password
+ * @returns {string}
+ */
+function passwordIssue(password) {
+  if (password.length < 12) {
+    return "Use a password with at least 12 characters.";
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+    return "Use uppercase and lowercase letters, a number, and a symbol.";
+  }
+  return "";
+}
+
+/**
+ * @param {boolean} isBusy
+ * @returns {void}
+ */
+function setAccountBusy(isBusy) {
+  if (accountSubmit instanceof HTMLButtonElement) {
+    accountSubmit.disabled = isBusy;
+    accountSubmit.textContent = isBusy
+      ? accountMode === "signup"
+        ? "Creating account..."
+        : "Signing in..."
+      : accountMode === "signup"
+        ? "Create account"
+        : "Sign in";
+  }
+  if (accountModeToggle instanceof HTMLButtonElement) {
+    accountModeToggle.disabled = isBusy;
+  }
+}
+
+if (accountModeToggle instanceof HTMLButtonElement) {
+  accountModeToggle.addEventListener("click", () => {
+    setAccountMode(accountMode === "signup" ? "signin" : "signup");
   });
 }
+
+if (
+  accountForm instanceof HTMLFormElement &&
+  displayNameInput instanceof HTMLInputElement &&
+  emailInput instanceof HTMLInputElement &&
+  passwordInput instanceof HTMLInputElement
+) {
+  accountForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    const displayName = displayNameInput.value.trim().replace(/\s+/g, " ");
+
+    if (!emailInput.validity.valid || email === "") {
+      setAccountStatus("Enter a valid email address.", true);
+      emailInput.focus();
+      return;
+    }
+    const issue = passwordIssue(password);
+    if (issue !== "") {
+      setAccountStatus(issue, true);
+      passwordInput.focus();
+      return;
+    }
+    if (accountMode === "signup") {
+      if (displayName.length < 2 || displayName.length > 32 || displayName.includes("@")) {
+        setAccountStatus("Choose a nickname between 2 and 32 characters, without an email address.", true);
+        displayNameInput.focus();
+        return;
+      }
+    }
+
+    setAccountBusy(true);
+    setAccountStatus("");
+    try {
+      if (accountMode === "signup") {
+        const result = await createAccount({ email, password, displayName });
+        if (!result.ok) {
+          setAccountStatus(result.error, true);
+          return;
+        }
+        passwordInput.value = "";
+        if (result.requiresEmailConfirmation) {
+          setAccountMode("signin");
+          setAccountStatus("Check your email once to finish creating your account. Then sign in with your password.");
+        } else {
+          setAccountStatus("Your account is ready.");
+        }
+        return;
+      }
+
+      const result = await signIn({ email, password });
+      if (!result.ok) {
+        setAccountStatus(result.error, true);
+        return;
+      }
+      passwordInput.value = "";
+      setAccountStatus("Signed in successfully.");
+    } catch {
+      setAccountStatus("We couldn't complete that request. Please try again.", true);
+    } finally {
+      setAccountBusy(false);
+    }
+  });
+}
+
+setAccountMode("signin");
 
 const signOutButton = pick("[data-signout-button]");
 if (signOutButton instanceof HTMLButtonElement) {

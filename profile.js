@@ -17,6 +17,11 @@ import { initAuth, onAuthChange, signOut } from "./auth.js";
 import { icon } from "./icon.js";
 import { getProgress, resetEpisode } from "./progress.js";
 import { startProgressSync } from "./progress-sync.js";
+import {
+  getProfilePrivacy,
+  resetRemoteProgress,
+  updateProfilePrivacy,
+} from "./supabase.js";
 
 /** @typedef {import("./auth.js").User} User */
 /** @typedef {{ id: string, name: string, description: string, icon: string }} BadgeMeta */
@@ -454,22 +459,8 @@ function renderIdentity(user) {
   const avatar = pick("[data-user-avatar]");
   if (avatar) {
     avatar.replaceChildren();
-    avatar.classList.toggle("profile-avatar--photo", user.picture !== "");
-    if (user.picture !== "") {
-      const img = document.createElement("img");
-      img.src = user.picture;
-      img.alt = "";
-      img.referrerPolicy = "no-referrer";
-      img.width = 84;
-      img.height = 84;
-      img.addEventListener("error", () => {
-        avatar.classList.remove("profile-avatar--photo");
-        avatar.replaceChildren(initialFor(user.name));
-      });
-      avatar.appendChild(img);
-    } else {
-      avatar.appendChild(initialFor(user.name));
-    }
+    avatar.classList.remove("profile-avatar--photo");
+    avatar.appendChild(initialFor(user.name));
   }
 
   const name = pick("[data-user-name]");
@@ -480,17 +471,16 @@ function renderIdentity(user) {
   const kind = pick("[data-user-kind]");
   if (kind) {
     kind.replaceChildren(
-      icon(user.guest ? "user" : "shield-check", { size: 15 }),
-      el("span", "", user.guest ? "Guest session" : "Google account"),
+      icon("shield-check", { size: 15 }),
+      el("span", "", "Techinance account"),
     );
-    kind.classList.toggle("profile-tag--guest", user.guest);
   }
 
   const detail = pick("[data-user-detail]");
   if (detail) {
-    detail.textContent = user.guest
-      ? "Your progress is stored in this browser only. It isn't sent anywhere, and it won't follow you to another device or another browser."
-      : user.email || "Your progress is saved on this device, under your Google account.";
+    detail.textContent = user.email
+      ? `Signed in as ${user.email}. Your progress is private to your account.`
+      : "Your progress is private to your Techinance account.";
   }
 }
 
@@ -780,6 +770,7 @@ function render(user) {
 
   if (!user) {
     closeConfirm();
+    resetPrivacyForm();
     return;
   }
 
@@ -788,6 +779,7 @@ function render(user) {
   renderTotals(progress);
   renderBadges(progress.badges);
   renderCourses(user.id);
+  loadProfilePrivacy(user);
 }
 
 /* ------------------------------------------------------------------ */
@@ -796,6 +788,234 @@ function render(user) {
 
 /** @type {User | null} */
 let currentUser = null;
+
+let privacyRequestVersion = 0;
+let privacyUserId = "";
+let privacyLoaded = false;
+let privacyLoading = false;
+let privacyNicknameNeedsChoice = false;
+let storedPrivateNickname = "Learner";
+
+const privacyForm = pick("[data-privacy-form]");
+const privacyNickname = pick("[data-profile-display-name]");
+const privacyVisible = pick("[data-leaderboard-visible]");
+const privacySave = pick("[data-privacy-save]");
+const privacyStatus = pick("[data-privacy-status]");
+
+/**
+ * @param {string} message
+ * @returns {void}
+ */
+function setPrivacyStatus(message) {
+  if (privacyStatus) {
+    privacyStatus.textContent = message;
+  }
+}
+
+/**
+ * @param {boolean} disabled
+ * @returns {void}
+ */
+function setPrivacyControlsDisabled(disabled) {
+  if (privacyNickname instanceof HTMLInputElement) {
+    privacyNickname.disabled = disabled;
+  }
+  if (privacyVisible instanceof HTMLInputElement) {
+    privacyVisible.disabled = disabled;
+  }
+  if (privacySave instanceof HTMLButtonElement) {
+    privacySave.disabled = disabled;
+  }
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function normalizeNickname(value) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function nicknameError(value) {
+  if (value.length < 2 || value.length > 32) {
+    return "Choose a nickname between 2 and 32 characters.";
+  }
+  if (value.includes("@")) {
+    return "Choose a nickname without an email address.";
+  }
+  return "";
+}
+
+/** @returns {void} */
+function resetPrivacyForm() {
+  privacyRequestVersion += 1;
+  privacyUserId = "";
+  privacyLoaded = false;
+  privacyLoading = false;
+  privacyNicknameNeedsChoice = false;
+  storedPrivateNickname = "Learner";
+  if (privacyNickname instanceof HTMLInputElement) {
+    privacyNickname.value = "";
+  }
+  if (privacyVisible instanceof HTMLInputElement) {
+    privacyVisible.checked = false;
+  }
+  setPrivacyControlsDisabled(true);
+  setPrivacyStatus("");
+}
+
+/**
+ * Loads the current learner's private settings once per account. A private
+ * profile intentionally starts with a blank nickname field, so a legacy name
+ * can never become public just because someone checks the opt-in box.
+ *
+ * @param {User} user
+ * @returns {void}
+ */
+function loadProfilePrivacy(user) {
+  if (privacyUserId === user.id && (privacyLoaded || privacyLoading)) {
+    return;
+  }
+
+  const version = ++privacyRequestVersion;
+  privacyUserId = user.id;
+  privacyLoaded = false;
+  privacyLoading = true;
+  privacyNicknameNeedsChoice = false;
+  setPrivacyControlsDisabled(true);
+  setPrivacyStatus("Loading private leaderboard settings...");
+
+  void getProfilePrivacy()
+    .then((result) => {
+      if (version !== privacyRequestVersion || currentUser?.id !== user.id) {
+        return;
+      }
+      privacyLoading = false;
+      if (!result.ok) {
+        setPrivacyStatus("Privacy settings are unavailable right now. Your progress remains private.");
+        return;
+      }
+
+      const savedNickname = normalizeNickname(result.displayName);
+      storedPrivateNickname = savedNickname || "Learner";
+      privacyNicknameNeedsChoice = result.leaderboardVisible !== true;
+      if (privacyNickname instanceof HTMLInputElement) {
+        privacyNickname.value = result.leaderboardVisible ? savedNickname : "";
+      }
+      if (privacyVisible instanceof HTMLInputElement) {
+        privacyVisible.checked = result.leaderboardVisible === true;
+      }
+      privacyLoaded = true;
+      setPrivacyControlsDisabled(false);
+      setPrivacyStatus(
+        result.leaderboardVisible
+          ? "Your chosen nickname and aggregate totals are visible on the leaderboard."
+          : "Your progress is private. Choose a nickname only if you want to opt in.",
+      );
+    })
+    .catch(() => {
+      if (version !== privacyRequestVersion || currentUser?.id !== user.id) {
+        return;
+      }
+      privacyLoading = false;
+      setPrivacyStatus("Privacy settings are unavailable right now. Your progress remains private.");
+    });
+}
+
+if (privacyVisible instanceof HTMLInputElement) {
+  privacyVisible.addEventListener("change", () => {
+    if (privacyVisible.checked && privacyNicknameNeedsChoice) {
+      if (privacyNickname instanceof HTMLInputElement) {
+        privacyNickname.value = "";
+        privacyNickname.focus();
+      }
+      setPrivacyStatus("Choose a nickname before sharing your totals.");
+    }
+  });
+}
+
+if (privacyNickname instanceof HTMLInputElement) {
+  privacyNickname.addEventListener("input", () => {
+    if (normalizeNickname(privacyNickname.value) !== "") {
+      privacyNicknameNeedsChoice = false;
+    }
+  });
+}
+
+if (privacyForm instanceof HTMLFormElement) {
+  privacyForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const user = currentUser;
+    if (!user || !privacyLoaded || privacyLoading) {
+      return;
+    }
+
+    const visible = privacyVisible instanceof HTMLInputElement && privacyVisible.checked;
+    const nickname =
+      privacyNickname instanceof HTMLInputElement ? normalizeNickname(privacyNickname.value) : "";
+
+    // A private learner can leave this optional field blank. There is nothing
+    // to save in that case, and their records remain private by default.
+    if (!visible && nickname === "") {
+      setPrivacyStatus("Your progress is already private. Choose a nickname only if you want to opt in.");
+      return;
+    }
+
+    const error = nicknameError(nickname);
+    if (error) {
+      setPrivacyStatus(error);
+      if (privacyNickname instanceof HTMLInputElement) {
+        privacyNickname.focus();
+      }
+      return;
+    }
+
+    const version = ++privacyRequestVersion;
+    privacyLoading = true;
+    setPrivacyControlsDisabled(true);
+    setPrivacyStatus("Saving privacy settings...");
+
+    void updateProfilePrivacy({ displayName: nickname || storedPrivateNickname, leaderboardVisible: visible })
+      .then((result) => {
+        if (version !== privacyRequestVersion || currentUser?.id !== user.id) {
+          return;
+        }
+        privacyLoading = false;
+        if (!result.ok) {
+          setPrivacyControlsDisabled(false);
+          setPrivacyStatus("We couldn't save those privacy settings. Please try again.");
+          return;
+        }
+
+        storedPrivateNickname = nickname;
+        privacyNicknameNeedsChoice = false;
+        privacyLoaded = true;
+        setPrivacyControlsDisabled(false);
+        setPrivacyStatus(
+          visible
+            ? "Your chosen nickname and aggregate totals are now visible on the leaderboard."
+            : "Your progress is private and will not appear on the leaderboard.",
+        );
+
+        // The helper also updates the Auth metadata. Updating this view now
+        // avoids leaving an old nickname on screen until the next auth event.
+        currentUser = { ...user, name: nickname };
+        renderIdentity(currentUser);
+      })
+      .catch(() => {
+        if (version !== privacyRequestVersion || currentUser?.id !== user.id) {
+          return;
+        }
+        privacyLoading = false;
+        setPrivacyControlsDisabled(false);
+        setPrivacyStatus("We couldn't save those privacy settings. Please try again.");
+      });
+  });
+}
 
 const resetButton = pick("[data-reset-button]");
 const resetConfirm = pick("[data-reset-confirm]");
@@ -836,16 +1056,38 @@ if (resetButton instanceof HTMLButtonElement) {
 
 if (resetYes instanceof HTMLButtonElement) {
   resetYes.addEventListener("click", () => {
-    if (currentUser) {
-      for (const unit of PLAYABLE_UNITS) {
-        resetEpisode(currentUser.id, unit.episodeId);
-      }
-      render(currentUser);
+    const resetUser = currentUser;
+    if (!resetUser) {
+      closeConfirm("Sign in to reset your progress.");
+      return;
     }
-    closeConfirm("Progress cleared for every unit. Your badges are still in your collection.");
+
+    for (const unit of PLAYABLE_UNITS) {
+      resetEpisode(resetUser.id, unit.episodeId);
+    }
+    render(resetUser);
+    closeConfirm("Progress cleared for every unit. Syncing that reset across your devices. Your badges stay.");
     if (resetButton instanceof HTMLButtonElement) {
       resetButton.focus();
     }
+
+    // This does not block the local reset. A learner can keep using the page
+    // while the authenticated database request completes.
+    void resetRemoteProgress()
+      .then(({ ok }) => {
+        if (currentUser?.id !== resetUser.id || !resetStatus) {
+          return;
+        }
+        resetStatus.textContent = ok
+          ? "Progress cleared across your signed-in devices. Your badges stay."
+          : "Progress was cleared on this device. We could not update saved progress yet. Check your connection and try again.";
+      })
+      .catch(() => {
+        if (currentUser?.id === resetUser.id && resetStatus) {
+          resetStatus.textContent =
+            "Progress was cleared on this device. We could not update saved progress yet. Check your connection and try again.";
+        }
+      });
   });
 }
 

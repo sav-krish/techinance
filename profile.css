@@ -216,6 +216,124 @@
   background: var(--white);
 }
 
+/* Leaderboard privacy ---------------------------------------------------- */
+
+.profile-privacy {
+  border: 1px solid var(--learn-line);
+  border-radius: var(--learn-radius);
+  padding: 24px;
+  background: color-mix(in srgb, var(--ice) 20%, var(--white));
+  box-shadow: var(--learn-shadow);
+}
+
+.profile-privacy__form {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-privacy__field {
+  display: grid;
+  max-width: 440px;
+  gap: 7px;
+}
+
+.profile-privacy__label {
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-privacy__input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid var(--learn-line-strong);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--navy);
+  background: var(--white);
+  font: inherit;
+}
+
+.profile-privacy__input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--steel) 34%, transparent);
+  outline-offset: 2px;
+  border-color: var(--steel);
+}
+
+.profile-privacy__input:disabled {
+  cursor: wait;
+  color: var(--slate);
+  background: color-mix(in srgb, var(--ice) 46%, var(--white));
+}
+
+.profile-privacy__hint {
+  color: var(--slate);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-privacy__choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  max-width: 660px;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--steel) 22%, var(--learn-line));
+  border-radius: 14px;
+  padding: 15px 16px;
+  color: var(--navy);
+  background: var(--white);
+  cursor: pointer;
+}
+
+.profile-privacy__choice input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--steel);
+}
+
+.profile-privacy__choice:has(input:disabled) {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.profile-privacy__choice strong,
+.profile-privacy__choice small {
+  display: block;
+}
+
+.profile-privacy__choice strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.profile-privacy__choice small {
+  margin-top: 4px;
+  color: var(--slate);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-privacy__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.profile-privacy__status {
+  margin: 0;
+  color: var(--slate);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.profile-privacy__status:empty {
+  display: none;
+}
+
 /* Totals ----------------------------------------------------------------- */
 
 .profile-stats {
@@ -690,6 +808,15 @@
   }
 
   .profile-signout {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .profile-privacy {
+    padding: 18px;
+  }
+
+  .profile-privacy__actions .button {
     width: 100%;
     min-height: 44px;
   }

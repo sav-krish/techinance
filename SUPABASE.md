@@ -1,144 +1,99 @@
 # Supabase setup
 
-Verified Google sign-in and a real cross-device XP leaderboard. Until the two
-values in `supabase-config.js` are filled in, none of this is active and the
-site behaves exactly as before: guest mode, local progress, device-local board.
+Techinance uses Supabase Auth for first-party email-and-password accounts and
+Supabase Postgres for private Story Mode progress. This document is the launch
+checklist for the configured project.
 
-Roughly 20 minutes, most of it clicking through two dashboards.
+## 1. Apply the database schema
 
-## 1. Create the project
+In the Supabase dashboard, open **SQL Editor**, create a query, paste all of
+[`supabase/schema.sql`](supabase/schema.sql), and run it.
 
-<https://supabase.com/dashboard> → New project. Any region. Free tier is ample:
-this stores a few hundred bytes per learner.
+The schema is safe to run again. It creates or updates:
 
-## 2. Run the schema
+- `profiles` with a learner-controlled display name and a private-by-default
+  leaderboard preference
+- `episode_progress` and `earned_badges` for the signed-in learner only
+- Row Level Security policies that restrict each learner to their own records
+- `leaderboard()` which returns only opted-in aliases and aggregate totals
+- `reset_my_progress()` for an authenticated learner's own progress
 
-SQL Editor → New query → paste all of [`supabase/schema.sql`](supabase/schema.sql)
-→ Run. Safe to re-run; every object is `create if not exists` or dropped first.
+## 2. Configure Auth securely
 
-It creates three tables (`profiles`, `episode_progress`, `earned_badges`), turns
-on Row Level Security for all of them, adds a trigger that creates a profile on
-first sign-in, and adds two functions: `leaderboard()` and `reset_my_progress()`.
+In **Authentication → Providers**:
 
-## 3. Create a Google OAuth client
+- Enable **Email**.
+- Keep third-party social sign-in providers disabled unless they are separately
+  reviewed and added to the privacy policy.
+- Keep **Confirm email** enabled. This protects account ownership when an
+  account is created. It does not send an email during ordinary password
+  sign-ins.
+- Set a password policy of at least 12 characters. Require upper- and
+  lower-case letters, a number, and a symbol if the project settings provide
+  those controls. Enable leaked-password protection where available.
 
-This is **not** the same thing as the browser client ID in `auth-config.js`. That
-one runs entirely in the browser and verifies nothing. This one has a secret and
-is checked by Supabase's servers, which is what makes a leaderboard trustworthy.
+In **Authentication → URL Configuration**:
 
-1. In Supabase: **Authentication → Providers → Google**. Copy the **Callback URL**
-   it shows, which looks like `https://<project-ref>.supabase.co/auth/v1/callback`.
-2. In <https://console.cloud.google.com> → **APIs & Services → Credentials** →
-   Create credentials → **OAuth client ID** → **Web application**.
-   - **Authorized JavaScript origins** (origin only, no path, no trailing slash):
-     ```
-     http://localhost:4173
-     http://localhost:5173
-     https://alancai27.github.io
-     ```
-   - **Authorized redirect URIs**: the Supabase callback URL from step 1, exactly.
-3. Copy the **client ID and client secret** back into the Supabase Google provider
-   form and enable it.
+- **Site URL:** `https://sav-krish.github.io/techinance/`
+- **Redirect URLs:**
 
-The secret lives in Supabase and never in this repo.
-
-## 4. Tell Supabase where it may send people back
-
-**Authentication → URL Configuration**:
-
-- **Site URL**: `https://alancai27.github.io/techinance/`
-- **Redirect URLs**: add each of
-  ```
-  http://localhost:4173/techinance/**
-  http://localhost:5173/**
-  https://alancai27.github.io/techinance/**
+  ```text
+  https://sav-krish.github.io/techinance/learn.html
   ```
 
-A redirect that isn't on this list is rejected and sign-in bounces with an error.
-This is the step people usually miss.
+Add a separate exact URL only when a new account-related page is deployed.
 
-## 5. Fill in the config
+Add CAPTCHA or Turnstile for sign-up, sign-in, and password recovery after its
+site keys have been created. It adds abuse protection without weakening the
+email confirmation requirement.
 
-**Project Settings → API**, then paste into `supabase-config.js`:
+## 3. Client configuration
+
+In **Project Settings → API**, copy the project URL and **publishable** key to
+[`supabase-config.js`](supabase-config.js):
 
 ```js
 export const SUPABASE_URL = "https://<project-ref>.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJ...";
+export const SUPABASE_ANON_KEY = "sb_publishable_...";
 ```
 
-Both are public by design and belong in the repo. The **`service_role`** key does
-not: it bypasses Row Level Security entirely and would let anyone holding it
-rewrite every learner's score. It is never needed by this site.
+The URL and publishable key are intended for browser use. Never put a
+`service_role` key in this repository, in a browser bundle, or in a GitHub Pages
+secret exposed to frontend code. A service-role key bypasses Row Level Security.
 
-Commit, push, done.
+## Privacy model
 
-## Keeping the free project awake
+- Supabase Auth processes account passwords. The site does not store raw
+  passwords in its JavaScript, local progress cache, or database tables.
+- Supabase persists a signed-in session token in the browser so a learner stays
+  signed in. It is not their password. Signing out or clearing browser data
+  removes the local session.
+- Browser storage can hold a local progress copy for offline continuity. The
+  page never reads a device-wide roster or renders identities saved by other
+  people using the same browser.
+- Row Level Security allows a learner to read and modify only their own profile,
+  progress, and badges.
+- A learner is absent from the leaderboard unless they explicitly opt in. The
+  leaderboard returns only an alias, total XP, badge count, and episode count.
+  It never returns email addresses, profile images, answers, or scene history.
 
-Free projects pause after **7 days without database activity**, and a paused
-project means sign-in stops working until someone restores it from the dashboard.
-You'd usually find out because a student reports they can't log in.
+Keep the Privacy Policy and Terms aligned with any future change to what is
+stored, shared, or displayed.
 
-[`.github/workflows/supabase-keepalive.yml`](.github/workflows/supabase-keepalive.yml)
-runs a trivial query every Monday and Thursday, so a worst-case four-day gap
-can't cross the seven-day line even if one run fails. It reads the URL and key
-straight out of `supabase-config.js` rather than from GitHub variables, so
-there's one source of truth, and it skips silently while that file is empty.
+## Progress integrity
 
-The query hits `profiles`, which RLS locks down, so an anonymous caller gets an
-empty array. That's deliberate: it proves the database woke up without reading a
-single learner's data.
-
-Run it by hand any time from **Actions → Keep Supabase awake → Run workflow**, or
-locally:
-
-```bash
-node scripts/supabase-keepalive.mjs
-```
-
-One catch worth knowing: **GitHub disables scheduled workflows in a repository
-with no commits for 60 days.** It emails repo admins first. If Techinance goes
-quiet for two months, re-enable it from the Actions tab, and be aware the
-Supabase project may have paused in the meantime.
-
-The alternative is Pro at $25/month, where projects never pause. Worth it once
-there's real student traffic to protect; the ping is fine before that.
-
-## What this does and doesn't protect
-
-**Identity: solved.** After this, a learner cannot claim to be someone else. The
-Google token is verified by Supabase's servers, and Row Level Security means a
-learner can only read and write their own rows. Nobody can read anyone else's
-progress, even signed in. The leaderboard is exposed through a `SECURITY DEFINER`
-function that returns display names and three totals, nothing more.
-
-**Scores: partly.** XP is still calculated in the browser and posted up, so a
-learner with devtools can send a number they didn't earn. `schema.sql` caps XP at
-2000 per episode, which stops the obvious "set it to a million" case, but not a
-patient cheat. Fully trustworthy scores would need the scene graph to run
-server-side, which is a large rewrite and probably not worth it for free content.
-Worth knowing before anyone attaches a prize to a leaderboard position.
-
-**Privacy: your call.** Publishing learners' names and scores to other learners is
-a different thing from storing progress on their own device, and the current
-[privacy policy](privacy.html) describes the local-only model. Update it before
-switching this on, and decide whether under-13s should appear at all.
+XP is calculated in the browser, so it is suitable for personal progress but
+not for prizes or high-stakes ranking. The schema caps XP per episode, which
+rejects obvious invalid values. A competition-grade score system would require
+server-side grading and validation.
 
 ## How the code fits together
 
+```text
+supabase-config.js  Project URL and publishable browser key.
+supabase.js         Supabase Auth, private progress sync, and opt-in leaderboard RPC.
+auth.js             First-party email/password session state and navigation controls.
+progress-sync.js    Local-first progress cache plus authenticated push and pull.
+leaderboard.js      Remote opt-in board only. Never reads device identity caches.
+supabase/schema.sql Tables, RLS policies, trigger, and database functions.
 ```
-supabase-config.js  URL + anon key. Empty = everything below no-ops.
-supabase.js         Client, Google OAuth, push/pull, leaderboard() RPC.
-progress-sync.js    Debounced push, one-time pull on a new device.
-auth.js             Prefers a verified Supabase session; guest mode unchanged.
-leaderboard.js      Remote board when configured, device-local otherwise.
-supabase/schema.sql Tables, RLS policies, functions.
-```
-
-Gameplay is deliberately local-first. `story-engine.js` writes XP to
-localStorage exactly as before and never waits on the network, so a scene
-advances at the speed of a click on bad school wifi. `progress-sync.js` pushes
-that up a few seconds later, and on page hide. A learner signing in on a new
-device pulls their progress down once, and local wins any conflict.
-
-Guests are never synced and never appear on the board. Guest progress stays in
-the browser, which is what the sign-in screen promises.

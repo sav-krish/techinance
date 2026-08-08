@@ -86,7 +86,6 @@
         <a class="button button--primary profile-gate__cta" href="learn.html">
           Go to My Learning to sign in
         </a>
-        <p class="profile-gate__note">Guest progress stays in this browser.</p>
       </section>
 
       <!-- Identity ------------------------------------------------------------>
@@ -109,6 +108,61 @@
           <button class="profile-signout" type="button" data-signout-button>
             Sign out
           </button>
+        </div>
+      </section>
+
+      <!-- Leaderboard privacy ------------------------------------------------>
+      <section
+        class="profile-section"
+        aria-labelledby="profile-privacy-title"
+        data-signed-in
+        hidden
+      >
+        <div class="profile-privacy">
+          <div class="profile-section__head">
+            <h2 class="profile-section__title" id="profile-privacy-title">Leaderboard Privacy</h2>
+            <p class="profile-section__lead">
+              Your learning is private by default. Share only if you want your nickname and totals to appear
+              on the optional leaderboard.
+            </p>
+          </div>
+
+          <form class="profile-privacy__form" data-privacy-form novalidate>
+            <label class="profile-privacy__field" for="leaderboard-nickname">
+              <span class="profile-privacy__label">Leaderboard nickname</span>
+              <input
+                id="leaderboard-nickname"
+                class="profile-privacy__input"
+                type="text"
+                name="leaderboard-nickname"
+                minlength="2"
+                maxlength="32"
+                autocomplete="nickname"
+                spellcheck="false"
+                aria-describedby="leaderboard-nickname-note"
+                data-profile-display-name
+                disabled
+              />
+              <span class="profile-privacy__hint" id="leaderboard-nickname-note">
+                Use 2 to 32 characters. Do not use your email address, full name, or other personal details.
+              </span>
+            </label>
+
+            <label class="profile-privacy__choice">
+              <input type="checkbox" data-leaderboard-visible disabled />
+              <span>
+                <strong>Show my nickname and totals on the leaderboard</strong>
+                <small>Only your nickname, total XP, badge count, and completed-episode count are shared.</small>
+              </span>
+            </label>
+
+            <div class="profile-privacy__actions">
+              <button class="button button--secondary" type="submit" data-privacy-save disabled>
+                Save privacy settings
+              </button>
+              <p class="profile-privacy__status" role="status" aria-live="polite" data-privacy-status></p>
+            </div>
+          </form>
         </div>
       </section>
 

@@ -1,0 +1,41 @@
+# Production Auth configuration for the Techinance GitHub Pages site.
+# Push with: supabase config push --project-ref olzrznsctcqujtmhczjh
+project_id = "olzrznsctcqujtmhczjh"
+
+[auth]
+site_url = "https://sav-krish.github.io/techinance/"
+additional_redirect_urls = [
+  "https://sav-krish.github.io/techinance/learn.html",
+]
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+minimum_password_length = 12
+password_requirements = "lower_upper_letters_digits_symbols"
+
+[auth.rate_limit]
+# Per IP address in a five-minute window unless otherwise noted.
+email_sent = 3
+sign_in_sign_ups = 15
+token_verifications = 10
+token_refresh = 150
+
+[auth.email]
+enable_signup = true
+# Confirm ownership once at account creation. Normal password sign-ins do not
+# send a confirmation email.
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = true
+max_frequency = "60s"
+otp_length = 8
+otp_expiry = 3600
+
+[auth.external.google]
+enabled = false
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true

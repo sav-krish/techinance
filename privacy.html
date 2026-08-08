@@ -64,7 +64,7 @@
         <div class="legal__inner">
           <header class="legal__header">
             <h1 id="privacy-title">Privacy Policy</h1>
-            <p class="legal__updated">Last updated: August 6, 2026</p>
+            <p class="legal__updated">Last updated: August 7, 2026</p>
           </header>
 
           <div class="legal__body">
@@ -84,7 +84,7 @@
               </li>
               <li>
                 <strong>Enrollment information.</strong> When you register for a course through our enrollment
-                forms (including Google Forms), we may collect your name, email address, age or grade range,
+                forms, we may collect your name, email address, age or grade range,
                 location, and other details needed to place you in a classroom and communicate about the
                 course.
               </li>
@@ -94,20 +94,17 @@
                 address, how you would like to help, and anything else you choose to tell us.
               </li>
               <li>
-                <strong>Story Mode sign-in.</strong> Story Mode is the interactive part of our courses. If
-                you choose to sign in with Google, we receive your name, email address, and profile picture
-                and store them in our database, which is hosted by Supabase. We never receive your Google
-                password. You can also use Story Mode as a guest, which asks for nothing at all and stores
-                nothing outside your own browser.
+                <strong>Story Mode account.</strong> Story Mode is the interactive part of our courses. To
+                save progress, you create a Techinance account with an email address, password, and
+                learner-chosen nickname. Supabase Auth processes the password. We do not store or display
+                raw passwords in Techinance website code or progress records.
               </li>
               <li>
                 <strong>Story Mode progress.</strong> Your XP, badges, completed episodes, and place in an
-                episode are saved in your browser so that a lesson keeps working if your connection drops.
-                <strong>If you are signed in with Google</strong>, that progress is also saved to our database
-                so it follows you between devices, and your display name, profile picture and totals appear
-                on the leaderboard where other signed-in learners can see them. <strong>If you play as a
-                guest</strong>, nothing is uploaded: your progress stays on that one device, and you do not
-                appear on the leaderboard.
+                episode may be saved in your browser so that a lesson keeps working if your connection drops.
+                It is also saved to our database under your signed-in account so it can follow you between
+                devices. Your progress is private by default. You appear on the leaderboard only if you
+                explicitly choose to share a display name and aggregate totals.
               </li>
               <li>
                 <strong>Technical information.</strong> Like most websites, our hosting or analytics providers
@@ -136,19 +133,19 @@
             <ul>
               <li>
                 <strong>Service providers.</strong> We use trusted tools to operate our programs, such as
-                email, Google Forms, Google Classroom, or website hosting. These providers process information
-                on our behalf and only as needed to deliver their services. Messages sent through our contact
+                email, enrollment and classroom platforms, or website hosting. These providers process
+                information on our behalf and only as needed to deliver their services. Messages sent through our contact
                 and Work with Us forms are delivered to our inbox by FormSubmit, a third-party form service,
                 which receives the name, email address, and message you submit in order to forward it to us.
                 Story Mode accounts and progress are stored with Supabase, which hosts our database and
                 handles sign-in on our behalf.
               </li>
               <li>
-                <strong>Other learners, on the leaderboard.</strong> If you sign in to Story Mode with
-                Google, your display name, profile picture, total XP, badge count, and number of completed
-                episodes are visible to other signed-in learners on the leaderboard page. Nothing else is
-                shared: your email address, your answers, and which scenes you have played are never shown
-                to anyone else. If you would rather not appear, play as a guest, or ask us to remove you.
+                <strong>Other learners, on the leaderboard.</strong> The leaderboard is optional. If you
+                choose to appear, other signed-in learners can see only your display name, total XP, badge
+                count, and completed-episode count. Your email address, answers, scene history, and profile
+                settings are never shown on the leaderboard. You can remain private or withdraw permission at
+                any time.
               </li>
               <li>
                 <strong>Legal requirements.</strong> We may disclose information if required by law, court
@@ -173,11 +170,10 @@
               take reasonable steps to delete it.
             </p>
             <p>
-              <strong>A note for parents about the leaderboard.</strong> Signing in to Story Mode with Google
-              puts a learner's first and last name, as it appears on their Google account, and their profile
-              picture on a page that other signed-in learners can see. If you would prefer a child not to be
-              visible to other learners, have them use <strong>guest mode</strong>, which keeps everything on
-              their own device and shows nothing to anybody. You can also email us at
+              <strong>A note for parents about the leaderboard.</strong> Story Mode accounts are private by
+              default. A learner can appear only by deliberately opting in with a display name they choose.
+              The leaderboard never shows email addresses, real names supplied at account creation, profile
+              photos, answers, or learning history. You can also email us at
               <a href="mailto:thetechinance@gmail.com">thetechinance@gmail.com</a> and we will delete the
               account and remove them from the leaderboard.
             </p>
@@ -189,9 +185,8 @@
             </p>
             <ul>
               <li>
-                <strong>Local storage.</strong> Holds your Story Mode progress and, if you sign in, your
-                session. You can clear it at any time from the Reset controls on your profile page or by
-                clearing your browser data.
+                <strong>Local storage.</strong> Holds a signed-in session token and a local copy of Story
+                Mode progress. It never stores your raw password. You can clear browser storage at any time.
               </li>
               <li>
                 <strong>Session storage.</strong> Remembers that you have already seen the homepage
@@ -212,9 +207,10 @@
               steps to delete or de-identify it.
             </p>
             <p>
-              Story Mode accounts and progress are kept until you delete them. Deleting your progress from
-              your profile page removes it immediately, and asking us to delete your account removes
-              everything we hold about it.
+              Story Mode accounts and progress are kept while the account remains active. Account deletion is
+              not currently available as a self-service page. You may request deletion by emailing us, and we
+              may need to verify the request before acting on it. Deleting progress from your profile page
+              clears lesson progress while keeping earned badges.
             </p>
 
             <h2>7. Data Security</h2>
@@ -227,7 +223,7 @@
               Story Mode data is protected at the database level: each learner's records can only be read or
               changed by that learner's own signed-in account. Nobody, including other learners, can read your
               answers or your history. The leaderboard is the one deliberate exception, and it exposes only
-              the display name, picture and totals described in section 3.
+              the opt-in display name and totals described in section 3.
             </p>
 
             <h2>8. Your Choices and Rights</h2>
@@ -238,14 +234,12 @@
               <li>Request deletion of your information, subject to legal or operational limits</li>
               <li>Opt out of non-essential communications</li>
               <li>
-                Delete your Story Mode progress yourself at any time, using the reset control on your profile
-                page. If you are signed in, that clears your saved progress from our database as well as from
-                your browser, and removes you from the leaderboard. Guest progress lives only in your browser,
-                so clearing your browser data removes it and we hold no copy.
+                Reset Story Mode lesson progress from your profile page. This clears your lesson state and XP
+                from the signed-in account while keeping earned badges.
               </li>
               <li>
-                Ask us to delete your Story Mode account entirely, including your name, email address and
-                profile picture. Email us and we will remove it.
+                Request account and saved-progress deletion by emailing us. Account deletion is not currently
+                available as a self-service page.
               </li>
             </ul>
             <p>
@@ -256,10 +250,10 @@
 
             <h2>9. Third-Party Links and Services</h2>
             <p>
-              Our website links to or relies on third-party sites and services, including Instagram, Google
-              Forms, Google Classroom, Google Identity Services (used for optional Story Mode sign-in), and
-              FormSubmit (used to deliver form messages to our inbox). Those services have their own privacy
-              policies. We are not responsible for their practices.
+              Our website links to or relies on third-party sites and services, including Instagram, Supabase
+              Auth and database services, enrollment and classroom platforms, and FormSubmit, which delivers
+              form messages to our inbox. Those services have their own privacy policies. We are not
+              responsible for their practices.
             </p>
 
             <h2>10. International Visitors</h2>

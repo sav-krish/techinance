@@ -1,64 +1,36 @@
 // @ts-check
 
 /**
- * Sign-in for the Techinance static site.
+ * Account state for the Techinance learning site.
  *
- * IMPORTANT: THIS IS NOT A SECURITY BOUNDARY.
- * There's no backend and no server-side verification. The Google ID token is
- * decoded in the browser purely to read a display name, email and picture, and
- * the resulting session is kept in `localStorage`. Anyone can open devtools and
- * write whatever they like into that key. That's fine for what it's used for
- * here: personalising free learning content and remembering progress on this
- * device. Never use it to protect anything private, paid, or sensitive. If real
- * authorisation is ever needed, the ID token must be sent to a server and
- * verified against Google's public keys there.
- *
- * Guest mode always works, including when no Google client id is configured.
+ * Authentication is handled only by Supabase Auth. This module deliberately
+ * keeps no separate account record, password, or identity cache in browser
+ * storage. Supabase keeps its session tokens so a learner can stay
+ * signed in on their own browser; passwords never pass through local storage.
  */
 
-import { GOOGLE_CLIENT_ID } from "./auth-config.js";
 import {
   getRemoteUser,
   isRemoteEnabled,
   onRemoteAuthChange,
-  signInWithGoogle,
+  signInWithPassword,
   signOutRemote,
+  signUpWithPassword,
 } from "./supabase.js";
 
-const STORAGE_KEY = "techinance.auth.v1";
-const SESSION_VERSION = 1;
-const GUEST_ID = "guest";
-const GIS_SRC = "https://accounts.google.com/gsi/client";
-const GIS_POLL_MS = 200;
-const GIS_TIMEOUT_MS = 10000;
 const LEARN_URL = "learn.html";
 const PROFILE_URL = "profile.html";
 const LEADERBOARD_URL = "leaderboard.html";
-const ROSTER_KEY = "techinance.roster.v1";
-const MAX_TIMEOUT = 2147483647;
 
 /**
  * @typedef {object} User
- * @property {string} id       Stable per-identity key; also the progress namespace.
- * @property {string} name
- * @property {string} email    Empty string for guests.
- * @property {string} picture  Avatar URL, or empty string.
- * @property {boolean} guest
+ * @property {string} id Stable Supabase user id and progress namespace.
+ * @property {string} name Learner-chosen display name.
+ * @property {string} email Private account email.
+ * @property {string} picture Reserved for a future optional avatar.
  */
 
-/** @typedef {{ user: User, exp: number | null }} Session */
-
-/**
- * Minimal shape of the bits of Google Identity Services we call.
- * @typedef {object} GoogleIdentity
- * @property {{ id: {
- *   initialize: (config: Record<string, unknown>) => void,
- *   renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void,
- *   disableAutoSelect: () => void,
- * } }} accounts
- */
-
-/** @type {Session | null} */
+/** @type {User | null} */
 let session = null;
 
 /** @type {Set<(user: User | null) => void>} */
@@ -68,353 +40,93 @@ const listeners = new Set();
 const navMounts = new Map();
 
 /**
- * Aborts the document-level listeners left behind by the previous render of a
- * nav mount, so re-rendering on every sign-in doesn't stack them up.
+ * Aborts document-level listeners from a previous rendering of one nav mount.
  * @type {WeakMap<HTMLElement, AbortController>}
  */
 const navControllers = new WeakMap();
 
-/** @type {Promise<GoogleIdentity> | null} */
-let gisPromise = null;
-
-let gisInitialised = false;
 let started = false;
+let ready = false;
 
-/** @type {ReturnType<typeof setTimeout> | null} */
-let expiryTimer = null;
+/** @type {() => void} */
+let resolveReady = () => {};
 
-/* ------------------------------------------------------------------ */
-/* storage                                                             */
-/* ------------------------------------------------------------------ */
-
-/**
- * @param {unknown} value
- * @returns {value is Record<string, unknown>}
- */
-function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+/** @type {Promise<void>} */
+const authReady = new Promise((resolve) => {
+  resolveReady = () => resolve();
+});
 
 /**
- * @param {unknown} value
- * @returns {string}
+ * Superseded browser-only identity records. They are removed once so an old
+ * browser-only identity cannot continue to appear in this account system.
+ * Supabase's own session key is intentionally not touched.
  */
-function str(value) {
-  return typeof value === "string" ? value : "";
-}
+const LEGACY_IDENTITY_KEYS = ["techinance.auth.v1", "techinance.roster.v1"];
 
-/** @returns {string} */
-function clientId() {
-  return typeof GOOGLE_CLIENT_ID === "string" ? GOOGLE_CLIENT_ID.trim() : "";
-}
-
-/**
- * @param {Session} candidate
- * @returns {boolean}
- */
-function isExpired(candidate) {
-  return typeof candidate.exp === "number" && candidate.exp * 1000 <= Date.now();
-}
-
-/** @returns {Session | null} */
-function readSession() {
-  /** @type {string | null} */
-  let raw;
+/** @returns {void} */
+function clearLegacyIdentityRecords() {
   try {
-    raw = localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // Storage blocked (private browsing). Sign-in just doesn't persist.
-    return null;
-  }
-  if (!raw) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(raw);
-    if (!isRecord(parsed) || !isRecord(parsed.user)) {
-      return null;
-    }
-    const user = parsed.user;
-    const id = str(user.id).trim();
-    if (id === "") {
-      return null;
-    }
-    const exp = typeof parsed.exp === "number" && Number.isFinite(parsed.exp) ? parsed.exp : null;
-    return {
-      exp,
-      user: {
-        id,
-        name: str(user.name).trim() || "Learner",
-        email: str(user.email),
-        picture: str(user.picture),
-        guest: user.guest === true,
-      },
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * @param {Session | null} next
- * @returns {void}
- */
-function writeSession(next) {
-  try {
-    if (next) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: SESSION_VERSION, ...next }));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+    for (const key of LEGACY_IDENTITY_KEYS) {
+      localStorage.removeItem(key);
     }
   } catch {
-    // Nothing persists this session, but the in-memory session still works.
-    return;
-  }
-  if (next) {
-    rememberLearner(next);
+    // Storage can be unavailable in a private browsing context.
   }
 }
 
-/**
- * Records a display name against a user id so the leaderboard can label rows.
- *
- * progress.js keys everything by user id and stores no names, and a signed-out
- * user's session is gone. Without this, every past learner on the device would
- * render as their raw id. Signing out deliberately leaves the roster alone: the
- * progress it labels survives sign-out too.
- *
- * @param {Session} session
- * @returns {void}
- */
-function rememberLearner(session) {
-  try {
-    const raw = localStorage.getItem(ROSTER_KEY);
-    const roster = raw ? JSON.parse(raw) : {};
-    if (typeof roster !== "object" || roster === null) {
-      return;
-    }
-    roster[session.user.id] = { name: session.user.name, picture: session.user.picture ?? "" };
-    localStorage.setItem(ROSTER_KEY, JSON.stringify(roster));
-  } catch {
-    // A leaderboard without names is a cosmetic loss, not a reason to fail.
+/** @returns {void} */
+function settleReady() {
+  if (!ready) {
+    ready = true;
+    resolveReady();
   }
 }
-
-/**
- * Display names for every learner who has signed in on this device.
- *
- * @returns {Record<string, { name: string, picture: string }>}
- */
-export function getLearnerRoster() {
-  try {
-    const raw = localStorage.getItem(ROSTER_KEY);
-    const roster = raw ? JSON.parse(raw) : {};
-    return typeof roster === "object" && roster !== null ? roster : {};
-  } catch {
-    return {};
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* session state                                                       */
-/* ------------------------------------------------------------------ */
 
 /** @returns {void} */
 function notify() {
-  const user = session ? session.user : null;
   for (const listener of Array.from(listeners)) {
     try {
-      listener(user);
+      listener(session);
     } catch {
-      // A broken subscriber must not take down the others.
-      continue;
+      // One view must not prevent the remaining views from updating.
     }
   }
-}
-
-/** @returns {void} */
-function scheduleExpiry() {
-  if (expiryTimer !== null) {
-    clearTimeout(expiryTimer);
-    expiryTimer = null;
-  }
-  if (!session || typeof session.exp !== "number") {
-    return;
-  }
-  const delay = session.exp * 1000 - Date.now();
-  if (delay <= 0 || delay > MAX_TIMEOUT) {
-    return;
-  }
-  expiryTimer = setTimeout(() => {
-    expiryTimer = null;
-    if (session && isExpired(session)) {
-      setSession(null);
-    }
-  }, delay);
 }
 
 /**
- * @param {Session | null} next
- * @param {boolean} [persist]
+ * @param {User | null} next
  * @returns {void}
  */
-function setSession(next, persist = true) {
+function setSession(next) {
+  const unchanged = session?.id === next?.id && session?.name === next?.name && session?.email === next?.email;
   session = next;
-  if (persist) {
-    writeSession(next);
+  if (!unchanged) {
+    notify();
   }
-  scheduleExpiry();
-  notify();
-}
-
-/* ------------------------------------------------------------------ */
-/* Google Identity Services                                            */
-/* ------------------------------------------------------------------ */
-
-/** @returns {GoogleIdentity | null} */
-function getGis() {
-  const holder = /** @type {{ google?: GoogleIdentity }} */ (/** @type {unknown} */ (window));
-  const gis = holder.google;
-  return gis && gis.accounts && gis.accounts.id ? gis : null;
 }
 
 /**
- * Injects the GIS script the first time it's actually needed.
- * @returns {Promise<GoogleIdentity>}
+ * @param {Awaited<ReturnType<typeof getRemoteUser>>} remote
+ * @returns {User | null}
  */
-function loadGis() {
-  if (gisPromise) {
-    return gisPromise;
-  }
-  gisPromise = new Promise((resolve, reject) => {
-    const ready = getGis();
-    if (ready) {
-      resolve(ready);
-      return;
-    }
-    // Poll as well as listen: if the script tag was already in the page and had
-    // finished loading before we got here, no "load" event is ever coming.
-    let waited = 0;
-    const poll = setInterval(() => {
-      waited += GIS_POLL_MS;
-      const gis = getGis();
-      if (gis) {
-        clearInterval(poll);
-        resolve(gis);
-      } else if (waited >= GIS_TIMEOUT_MS) {
-        clearInterval(poll);
-        reject(new Error("Google Identity Services did not load in time."));
-      }
-    }, GIS_POLL_MS);
-
-    const existing = document.querySelector(`script[src="${GIS_SRC}"]`);
-    const script = existing instanceof HTMLScriptElement ? existing : document.createElement("script");
-    script.addEventListener("load", () => {
-      const gis = getGis();
-      if (gis) {
-        clearInterval(poll);
-        resolve(gis);
-      }
-    });
-    script.addEventListener("error", () => {
-      clearInterval(poll);
-      reject(new Error("Could not load Google Identity Services."));
-    });
-    if (!existing) {
-      script.src = GIS_SRC;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-  });
-  return gisPromise;
-}
-
-/**
- * @param {unknown} token
- * @returns {Record<string, unknown> | null}
- */
-function decodeJwtPayload(token) {
-  const parts = str(token).split(".");
-  if (parts.length < 2 || parts[1] === "") {
+function toUser(remote) {
+  if (!remote) {
     return null;
   }
-  let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-  while (base64.length % 4 !== 0) {
-    base64 += "=";
-  }
-  try {
-    // atob yields one char per byte; decode those bytes as UTF-8 so names with
-    // accents, CJK characters or emoji survive intact.
-    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-    const parsed = JSON.parse(new TextDecoder().decode(bytes));
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  return {
+    id: remote.id,
+    name: remote.name || "Learner",
+    email: remote.email,
+    picture: "",
+  };
 }
 
 /**
- * @param {{ credential?: unknown }} response
- * @returns {void}
- */
-function handleCredential(response) {
-  const payload = decodeJwtPayload(response && response.credential);
-  if (!payload) {
-    return;
-  }
-  const sub = str(payload.sub).trim();
-  if (sub === "") {
-    return;
-  }
-  const email = str(payload.email);
-  const name = str(payload.name).trim() || str(payload.given_name).trim() || email.split("@")[0] || "Learner";
-  const exp = typeof payload.exp === "number" && Number.isFinite(payload.exp) ? payload.exp : null;
-  setSession({
-    exp,
-    user: {
-      id: `google-${sub}`,
-      name,
-      email,
-      picture: str(payload.picture),
-      guest: false,
-    },
-  });
-}
-
-/**
- * Loads GIS and calls `initialize` exactly once.
- * @returns {Promise<GoogleIdentity>}
- */
-function ensureGis() {
-  const id = clientId();
-  if (id === "") {
-    return Promise.reject(new Error("No Google client id configured."));
-  }
-  return loadGis().then((gis) => {
-    if (!gisInitialised) {
-      gis.accounts.id.initialize({
-        client_id: id,
-        callback: handleCredential,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        ux_mode: "popup",
-      });
-      gisInitialised = true;
-    }
-    return gis;
-  });
-}
-
-/* ------------------------------------------------------------------ */
-/* public API                                                          */
-/* ------------------------------------------------------------------ */
-
-/**
- * Restores any saved session and warms up Google Identity Services. Safe to
- * call from every page and safe to call more than once. Never throws, and never
- * blocks rendering. A missing or broken client id just means Google sign-in is
- * unavailable while guest mode carries on working.
+ * Starts Supabase session restoration. Safe to call more than once.
+ *
+ * There is intentionally no local fallback identity. If Supabase is not
+ * configured, account-only Story Mode stays signed out rather than silently
+ * creating a browser-only account.
  *
  * @returns {void}
  */
@@ -423,133 +135,86 @@ export function initAuth() {
     return;
   }
   started = true;
-  const restored = readSession();
-  if (restored && !isExpired(restored)) {
-    setSession(restored, false);
-  } else if (restored) {
+  clearLegacyIdentityRecords();
+
+  if (!isRemoteEnabled()) {
     setSession(null);
-  }
-  if (isRemoteEnabled()) {
-    adoptRemoteSession();
+    settleReady();
     return;
   }
-  if (clientId() !== "") {
-    ensureGis().catch(() => {
-      // Offline, blocked, or misconfigured. Guest mode is unaffected.
-    });
-  }
-}
-
-/**
- * Makes a verified Supabase session the site's session.
- *
- * The rest of the site talks to getUser()/onAuthChange() and knows nothing about
- * Supabase. Mapping the remote session onto the same shape here means learn.js,
- * profile.js, story.js and progress.js need no changes at all, and the local
- * user id keeps namespacing progress exactly as before.
- *
- * A guest session is left alone: signing in with Google replaces it, but merely
- * having Supabase configured shouldn't kick a guest out mid-episode.
- *
- * @returns {void}
- */
-function adoptRemoteSession() {
-  getRemoteUser()
-    .then((remote) => {
-      if (remote) {
-        setSession({
-          user: {
-            id: remote.id,
-            name: remote.name,
-            email: remote.email,
-            picture: remote.picture,
-            guest: false,
-          },
-          exp: null,
-        });
-      }
-    })
-    .catch(() => {
-      // Offline or the project is unreachable. Guest mode still works.
-    });
 
   onRemoteAuthChange((remote) => {
-    if (remote) {
-      setSession({
-          user: {
-            id: remote.id,
-            name: remote.name,
-            email: remote.email,
-            picture: remote.picture,
-            guest: false,
-          },
-          exp: null,
-        });
-    } else if (session && session.user.id !== GUEST_ID) {
-      setSession(null);
-    }
+    setSession(toUser(remote));
   });
+
+  getRemoteUser()
+    .then((remote) => {
+      setSession(toUser(remote));
+    })
+    .catch(() => {
+      setSession(null);
+    })
+    .finally(settleReady);
 }
 
 /**
- * @returns {User | null} the signed-in user, or null for a signed-out visitor
+ * Resolves after Supabase has checked its persisted session.
+ *
+ * Pages that must choose between rendering protected content and redirecting
+ * should await this rather than treating the initial asynchronous check as a
+ * signed-out result.
+ *
+ * @returns {Promise<void>}
+ */
+export function whenAuthReady() {
+  initAuth();
+  return authReady;
+}
+
+/**
+ * @returns {User | null} the signed-in learner, or null while signed out
  */
 export function getUser() {
   if (!started) {
     initAuth();
   }
-  if (session && isExpired(session)) {
-    setSession(null);
-  }
-  return session ? session.user : null;
+  return session;
 }
 
 /**
- * Signs in without Google. Guest progress is namespaced under the id "guest",
- * so it survives across visits on this device but is kept separate from any
- * Google account's progress.
+ * Creates a password account with a learner-selected display name.
  *
- * @param {string} [name]
- * @returns {User}
+ * @param {{ email: string, password: string, displayName: string }} credentials
+ * @returns {Promise<{ ok: boolean, error: string, requiresEmailConfirmation: boolean }>}
  */
-export function signInAsGuest(name) {
-  /** @type {User} */
-  const user = {
-    id: GUEST_ID,
-    name: (typeof name === "string" ? name.trim() : "") || "Guest learner",
-    email: "",
-    picture: "",
-    guest: true,
-  };
-  setSession({ user, exp: null });
-  return user;
+export async function createAccount(credentials) {
+  return signUpWithPassword(credentials);
+}
+
+/**
+ * Starts a normal password sign-in. It never triggers a confirmation email.
+ *
+ * @param {{ email: string, password: string }} credentials
+ * @returns {Promise<{ ok: boolean, error: string }>}
+ */
+export async function signIn(credentials) {
+  return signInWithPassword(credentials);
 }
 
 /** @returns {void} */
 export function signOut() {
-  const gis = getGis();
-  if (gis) {
-    try {
-      gis.accounts.id.disableAutoSelect();
-    } catch {
-      // Not fatal. We clear our own session regardless.
-    }
-  }
-  if (isRemoteEnabled()) {
-    // Clear the local session first so the UI updates now rather than after the
-    // network call. onRemoteAuthChange would clear it anyway; this just avoids a
-    // signed-in header lingering on a slow connection.
-    signOutRemote().catch(() => {});
-  }
   setSession(null);
+  void signOutRemote().catch(() => {
+    // The local UI has already signed out. A later auth event will agree.
+  });
 }
 
 /**
- * Subscribes to sign-in / sign-out. The callback fires immediately with the
- * current user so subscribers never have to special-case first render.
+ * Subscribes to sign-in and sign-out. The callback receives the current state
+ * immediately, then receives any later Supabase updates.
  *
  * @param {(user: User | null) => void} cb
- * @returns {() => void} unsubscribe
+ * @returns {() => void}
  */
 export function onAuthChange(cb) {
   if (typeof cb !== "function") {
@@ -559,99 +224,16 @@ export function onAuthChange(cb) {
   try {
     cb(getUser());
   } catch {
-    // Ignore a throwing subscriber; it stays subscribed.
+    // A broken subscriber is isolated from the rest of the site.
   }
-  return () => {
-    listeners.delete(cb);
-  };
-}
-
-/**
- * @param {string} text
- * @returns {HTMLParagraphElement}
- */
-function note(text) {
-  const el = document.createElement("p");
-  el.className = "auth-note";
-  el.textContent = text;
-  return el;
-}
-
-/**
- * Renders the real Google sign-in button into `el`. When no client id is
- * configured (or the script can't load) it renders a short explanatory note
- * instead. It never throws and never blocks guest sign-in.
- *
- * @param {HTMLElement} el
- * @returns {void}
- */
-export function mountGoogleButton(el) {
-  if (!(el instanceof HTMLElement)) {
-    return;
-  }
-  el.replaceChildren();
-
-  // Supabase, when configured, is the better path: it verifies the Google token
-  // server-side, so the session can be trusted enough to hang a leaderboard off.
-  // The browser-only GIS flow below never verifies anything, so it stays as the
-  // fallback rather than the default.
-  if (isRemoteEnabled()) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "button button--primary auth-google-button";
-    button.textContent = "Continue with Google";
-    button.addEventListener("click", () => {
-      button.disabled = true;
-      button.textContent = "Opening Google...";
-      signInWithGoogle().then((result) => {
-        if (!result.ok) {
-          button.disabled = false;
-          button.textContent = "Continue with Google";
-          el.appendChild(note(`Google sign-in failed: ${result.error}`));
-        }
-        // On success the browser is already navigating to Google.
-      });
-    });
-    el.appendChild(button);
-    return;
-  }
-
-  if (clientId() === "") {
-    el.appendChild(note("Google sign-in isn't set up yet. Carry on as a guest."));
-    return;
-  }
-  const slot = document.createElement("div");
-  slot.className = "auth-google-slot";
-  el.appendChild(slot);
-  ensureGis()
-    .then((gis) => {
-      gis.accounts.id.renderButton(slot, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        shape: "pill",
-        text: "signin_with",
-        logo_alignment: "left",
-      });
-    })
-    .catch(() => {
-      el.replaceChildren();
-      el.appendChild(note("Google sign-in couldn't load. Carry on as a guest."));
-    });
+  return () => listeners.delete(cb);
 }
 
 /* ------------------------------------------------------------------ */
 /* header control                                                      */
 /* ------------------------------------------------------------------ */
 
-/**
- * Structural-only fallback styling, injected once. Every selector is wrapped in
- * `:where(...)` so it has zero specificity: any rule in learn.css wins without
- * needing `!important`. Nothing here is decorative. It only stops the dropdown
- * from rendering as a stack of loose links before the stylesheet lands.
- *
- * @returns {void}
- */
+/** @returns {void} */
 function ensureNavStyles() {
   if (document.querySelector("style[data-auth-styles]")) {
     return;
@@ -680,27 +262,6 @@ function ensureNavStyles() {
 }
 
 /**
- * @param {User} user
- * @returns {HTMLElement}
- */
-function avatarFor(user) {
-  if (user.picture !== "") {
-    const img = document.createElement("img");
-    img.className = "auth-avatar";
-    img.src = user.picture;
-    img.alt = "";
-    img.width = 28;
-    img.height = 28;
-    img.referrerPolicy = "no-referrer";
-    img.addEventListener("error", () => {
-      img.replaceWith(initialAvatar(user.name));
-    });
-    return img;
-  }
-  return initialAvatar(user.name);
-}
-
-/**
  * @param {string} name
  * @returns {HTMLElement}
  */
@@ -710,6 +271,25 @@ function initialAvatar(name) {
   span.setAttribute("aria-hidden", "true");
   span.textContent = (name.trim()[0] || "?").toUpperCase();
   return span;
+}
+
+/**
+ * @param {User} user
+ * @returns {HTMLElement}
+ */
+function avatarFor(user) {
+  if (user.picture !== "") {
+    const image = document.createElement("img");
+    image.className = "auth-avatar";
+    image.src = user.picture;
+    image.alt = "";
+    image.width = 28;
+    image.height = 28;
+    image.referrerPolicy = "no-referrer";
+    image.addEventListener("error", () => image.replaceWith(initialAvatar(user.name)));
+    return image;
+  }
+  return initialAvatar(user.name);
 }
 
 /**
@@ -785,7 +365,6 @@ function renderAuthNav(el, user) {
   const controller = new AbortController();
   navControllers.set(el, controller);
   const { signal } = controller;
-
   toggle.addEventListener("click", (event) => {
     event.stopPropagation();
     setOpen(menu.hidden !== false);
@@ -815,9 +394,7 @@ function renderAuthNav(el, user) {
 }
 
 /**
- * Renders the header auth control into `el` and keeps it in sync: a "Sign in"
- * pill when signed out, or an avatar + first name that opens a small menu with
- * "Profile", "My Learning", "Leaderboard" and "Sign out".
+ * Renders and keeps the header account control in sync.
  *
  * @param {HTMLElement} el
  * @returns {void}
@@ -830,8 +407,5 @@ export function mountAuthNav(el) {
   if (previous) {
     previous();
   }
-  navMounts.set(
-    el,
-    onAuthChange((user) => renderAuthNav(el, user)),
-  );
+  navMounts.set(el, onAuthChange((user) => renderAuthNav(el, user)));
 }

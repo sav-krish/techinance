@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * The Supabase layer: verified Google sign-in, progress sync, and the
+ * The Supabase layer: private password accounts, progress sync, and the
  * cross-device leaderboard.
  *
  * DESIGN: local first, remote second.
@@ -16,9 +16,9 @@
  * scene, would put a round trip between a learner tapping an answer and seeing
  * whether they got it right, on school wifi, for no benefit.
  *
- * Everything here no-ops when supabase-config.js is empty. The site then behaves
- * exactly as it did before Supabase existed: guest mode, local progress, and a
- * device-local leaderboard.
+ * Account-only Story Mode intentionally has no guest fallback. If Supabase is
+ * unavailable, the learning hub remains signed out instead of creating an
+ * unverified local identity.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -31,7 +31,7 @@ import {
 } from "./supabase-config.js";
 
 /** @typedef {{ id: string, name: string, email: string, picture: string }} RemoteUser */
-/** @typedef {{ userId: string, name: string, avatar: string, xp: number, badges: number, episodes: number }} BoardRow */
+/** @typedef {{ isCurrentUser: boolean, name: string, xp: number, badges: number, episodes: number }} BoardRow */
 
 /** Episodes whose progress is worth syncing. Unknown ids are ignored. */
 const EPISODE_IDS = ["cyber-u1", "cyber-u2", "cyber-u3", "cyber-u4", "fin-u1", "fin-u4"];
@@ -59,7 +59,7 @@ export function supabase() {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        // The OAuth provider sends the learner back with a code in the URL.
+        // Handles the one-time email confirmation return during account setup.
         detectSessionInUrl: true,
         flowType: "pkce",
       },
@@ -81,16 +81,12 @@ export function isRemoteEnabled() {
  */
 function toRemoteUser(user) {
   const meta = user.user_metadata ?? {};
-  const name =
-    (typeof meta.full_name === "string" && meta.full_name.trim()) ||
-    (typeof meta.name === "string" && meta.name.trim()) ||
-    (user.email ?? "").split("@")[0] ||
-    "Learner";
+  const name = (typeof meta.display_name === "string" && meta.display_name.trim()) || "Learner";
   return {
     id: user.id,
     name,
     email: user.email ?? "",
-    picture: typeof meta.avatar_url === "string" ? meta.avatar_url : "",
+    picture: "",
   };
 }
 
@@ -112,24 +108,105 @@ export async function getRemoteUser() {
 }
 
 /**
- * Starts the Google OAuth redirect.
- *
- * `redirectTo` must be on the allow-list in Supabase under Authentication > URL
- * Configuration, or Supabase rejects the round trip. Passing the current page
- * means a learner lands back where they started rather than on the home page.
- *
- * @returns {Promise<{ ok: boolean, error: string }>}
+ * @returns {string | undefined}
  */
-export async function signInWithGoogle() {
+function accountReturnUrl() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  return new URL("learn.html", window.location.href).href;
+}
+
+/**
+ * Normalizes data which is allowed to become a profile display name. Account
+ * email addresses and provider names are deliberately never used as a fallback.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function normalizeDisplayName(value) {
+  return value.trim().replace(/\s+/g, " ").slice(0, 32);
+}
+
+/**
+ * Creates a Techinance email-and-password account.
+ *
+ * When Supabase email confirmation is enabled, successful account creation
+ * yields no session until the learner uses that one confirmation message. Normal
+ * password sign-in does not send mail.
+ *
+ * @param {{ email: string, password: string, displayName: string }} credentials
+ * @returns {Promise<{ ok: boolean, error: string, requiresEmailConfirmation: boolean }>}
+ */
+export async function signUpWithPassword(credentials) {
   const db = supabase();
   if (!db) {
-    return { ok: false, error: "Supabase isn't configured." };
+    return {
+      ok: false,
+      error: "Accounts are temporarily unavailable. Please try again shortly.",
+      requiresEmailConfirmation: false,
+    };
   }
-  const { error } = await db.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: window.location.href.split("#")[0] },
-  });
-  return error ? { ok: false, error: error.message } : { ok: true, error: "" };
+
+  const email = credentials.email.trim().toLowerCase();
+  const displayName = normalizeDisplayName(credentials.displayName);
+  const redirectTo = accountReturnUrl();
+  const options = {
+    data: { display_name: displayName },
+    ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
+  };
+  try {
+    const { data, error } = await db.auth.signUp({
+      email,
+      password: credentials.password,
+      options,
+    });
+    if (error) {
+      return {
+        ok: false,
+        error: "We couldn't create your account. Check the details and try again.",
+        requiresEmailConfirmation: false,
+      };
+    }
+    return {
+      ok: true,
+      error: "",
+      requiresEmailConfirmation: !data.session,
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "We couldn't create your account. Check the details and try again.",
+      requiresEmailConfirmation: false,
+    };
+  }
+}
+
+/**
+ * Starts a normal email-and-password session.
+ *
+ * The message stays deliberately generic so an attacker cannot use this form to
+ * discover whether a particular email address has an account.
+ *
+ * @param {{ email: string, password: string }} credentials
+ * @returns {Promise<{ ok: boolean, error: string }>}
+ */
+export async function signInWithPassword(credentials) {
+  const db = supabase();
+  if (!db) {
+    return { ok: false, error: "Accounts are temporarily unavailable. Please try again shortly." };
+  }
+  try {
+    const { error } = await db.auth.signInWithPassword({
+      email: credentials.email.trim().toLowerCase(),
+      password: credentials.password,
+    });
+    return error
+      ? { ok: false, error: "We couldn't sign you in. Check your email and password." }
+      : { ok: true, error: "" };
+  } catch {
+    return { ok: false, error: "We couldn't sign you in. Check your email and password." };
+  }
 }
 
 /** @returns {Promise<void>} */
@@ -138,6 +215,78 @@ export async function signOutRemote() {
   if (db) {
     await db.auth.signOut();
   }
+}
+
+/**
+ * Reads the signed-in learner's private leaderboard settings.
+ *
+ * @returns {Promise<{ ok: boolean, displayName: string, leaderboardVisible: boolean, error: string }>}
+ */
+export async function getProfilePrivacy() {
+  const db = supabase();
+  const remote = await getRemoteUser();
+  if (!db || !remote) {
+    return { ok: false, displayName: "Learner", leaderboardVisible: false, error: "Not signed in." };
+  }
+
+  const { data, error } = await db
+    .from("profiles")
+    .select("display_name, leaderboard_visible")
+    .eq("id", remote.id)
+    .maybeSingle();
+  if (error) {
+    return { ok: false, displayName: "Learner", leaderboardVisible: false, error: error.message };
+  }
+  return {
+    ok: true,
+    displayName: normalizeDisplayName(data?.display_name || remote.name || "Learner") || "Learner",
+    leaderboardVisible: data?.leaderboard_visible === true,
+    error: "",
+  };
+}
+
+/**
+ * Saves an alias and whether the learner wants their aggregate totals shown on
+ * the public leaderboard. This writes only the current learner's RLS-protected
+ * profile row.
+ *
+ * @param {{ displayName: string, leaderboardVisible: boolean }} settings
+ * @returns {Promise<{ ok: boolean, error: string }>}
+ */
+export async function updateProfilePrivacy(settings) {
+  const db = supabase();
+  const remote = await getRemoteUser();
+  if (!db || !remote) {
+    return { ok: false, error: "Not signed in." };
+  }
+
+  const displayName = normalizeDisplayName(settings.displayName);
+  if (displayName.length < 2 || displayName.includes("@")) {
+    return { ok: false, error: "Choose a nickname between 2 and 32 characters, without an email address." };
+  }
+
+  const { error } = await db.from("profiles").upsert(
+    {
+      id: remote.id,
+      display_name: displayName,
+      leaderboard_visible: settings.leaderboardVisible === true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+  if (error) {
+    return { ok: false, error: "We couldn't save those privacy settings. Please try again." };
+  }
+
+  // Keep the signed-in account's own greeting consistent with its chosen alias.
+  // A failure here does not expose data or undo the already-private profile save.
+  try {
+    await db.auth.updateUser({ data: { display_name: displayName } });
+  } catch {
+    // The profile setting is already saved. A later session refresh will still
+    // use the private profile row for the leaderboard.
+  }
+  return { ok: true, error: "" };
 }
 
 /**
@@ -304,12 +453,11 @@ export async function fetchLeaderboard(limit = 50) {
   if (error) {
     return { rows: [], error: error.message };
   }
-  /** @type {{ user_id: string, display_name: string, avatar_url: string | null, xp: number, badges: number, episodes: number }[]} */
+  /** @type {{ is_current_user: boolean, display_name: string, xp: number, badges: number, episodes: number }[]} */
   const raw = data ?? [];
   const rows = raw.map((row) => ({
-    userId: row.user_id,
+    isCurrentUser: row.is_current_user === true,
     name: row.display_name || "Learner",
-    avatar: row.avatar_url || "",
     xp: row.xp ?? 0,
     badges: row.badges ?? 0,
     episodes: row.episodes ?? 0,
