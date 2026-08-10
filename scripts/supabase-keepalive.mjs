@@ -14,9 +14,14 @@
  * into GitHub variables, because two copies of a value drift apart eventually
  * and only one of them is the one the site actually uses.
  *
- * The query hits the `profiles` table, which Row Level Security locks down. An
- * anonymous caller gets an empty array back. That's the point: it proves the
- * database woke up and answered without reading a single learner's data.
+ * The query deliberately targets the private `profiles` table. The anonymous
+ * key has no SELECT grant, so PostgREST normally returns PostgreSQL's 42501
+ * "permission denied" response. That is an expected successful health check:
+ * PostgreSQL received and evaluated the query, while no learner data was read.
+ *
+ * A future policy might instead return an empty array. That is also safe and
+ * successful. Any other error, including an invalid key or a missing table,
+ * must still fail loudly.
  *
  * Exit codes: 0 for pinged or deliberately skipped, 1 for a real failure.
  */
@@ -34,6 +39,29 @@ const url = `${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1`;
 const controller = new AbortController();
 const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+/**
+ * Returns true only for the exact permission error expected from this
+ * project's private profiles table. Do not broaden this: an arbitrary 401
+ * could mean an invalid key or a broken Supabase configuration.
+ *
+ * @param {number} status
+ * @param {string} body
+ */
+function isExpectedPrivateProfilesResponse(status, body) {
+  if (status !== 401 && status !== 403) return false;
+
+  try {
+    const payload = JSON.parse(body);
+    return (
+      payload?.code === "42501" &&
+      typeof payload?.message === "string" &&
+      /permission denied for table profiles/i.test(payload.message)
+    );
+  } catch {
+    return false;
+  }
+}
+
 try {
   const response = await fetch(url, {
     headers: {
@@ -45,10 +73,19 @@ try {
 
   if (!response.ok) {
     const body = await response.text();
+
+    if (isExpectedPrivateProfilesResponse(response.status, body)) {
+      console.log(
+        `Pinged ${SUPABASE_URL} successfully. ` +
+          "The anonymous key was correctly denied access to private profiles (PostgreSQL 42501).",
+      );
+      process.exit(0);
+    }
+
     console.error(`Ping failed: HTTP ${response.status} ${response.statusText}`);
     console.error(body.slice(0, 500));
-    // 401 or 404 here usually means the key is wrong or the schema was never
-    // run, both of which are worth failing loudly for rather than silently
+    // Anything besides the exact privacy denial above can indicate an invalid
+    // key, missing schema, or unavailable project. Fail rather than silently
     // letting the project pause a week later.
     process.exit(1);
   }
