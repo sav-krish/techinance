@@ -644,6 +644,21 @@ function liveCourseCard(userId, course) {
   );
   head.append(iconWrap, heading);
 
+  if (unitsDone > 0) {
+    const certBtn = el("button", "profile-course__cert-btn", "🎓 Certificate");
+    certBtn.addEventListener("click", () => {
+      import("./certificate-generator.js").then((certMod) => {
+        certMod.showCertificateModal({
+          studentName: getUser()?.name || "Learner",
+          studentEmail: getUser()?.email || "",
+          courseId: course.slug,
+          courseTitle: course.title,
+        });
+      });
+    });
+    head.append(certBtn);
+  }
+
   const unitWord = course.units.length === 1 ? "unit" : "units";
   const state = el(
     "p",

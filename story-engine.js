@@ -1723,6 +1723,11 @@ export function mountStory(options) {
     completeEpisode(userId, episodeId);
     updateHud(scene.id);
 
+    // Automatically trigger certificate generation & email dispatch if course completed
+    import("./certificate-generator.js").then((certMod) => {
+      certMod.handleAutoCertificateOnCompletion(userId, episodeId);
+    }).catch((err) => console.warn("Certificate auto-trigger check:", err));
+
     const frameRef = makeSceneFrame(scene, scene.title ?? "Episode Complete");
     frameRef.section.classList.add("story-ending");
 
@@ -1777,7 +1782,19 @@ export function mountStory(options) {
     }
 
     const actions = make("div", "story-ending-actions");
-    const back = makeButton("story-button story-button-primary", "Back to my learning");
+    const certBtn = makeButton("story-button story-button-primary", "🎓 Claim Certificate");
+    certBtn.addEventListener("click", () => {
+      import("./certificate-generator.js").then((certMod) => {
+        const info = certMod.checkCourseCompletion(userId, episodeId);
+        certMod.showCertificateModal({
+          studentName: user?.name || "Learner",
+          studentEmail: user?.email || "",
+          courseId: info?.courseId || "financial-literacy",
+          courseTitle: info?.courseTitle || "Financial Literacy",
+        });
+      });
+    });
+    const back = makeButton("story-button story-button-secondary", "Back to my learning");
     back.addEventListener("click", () => {
       clearPending();
       exit();
@@ -1788,7 +1805,7 @@ export function mountStory(options) {
       updateHud(episode.startScene);
       goTo(episode.startScene);
     });
-    actions.append(back, replay);
+    actions.append(certBtn, back, replay);
     frameRef.foot.append(actions);
 
     return frameRef;

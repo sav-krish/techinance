@@ -1,0 +1,32 @@
+{
+  "hash": "439cf5a2",
+  "configHash": "dc945d22",
+  "lockfileHash": "231b5473",
+  "browserHash": "87330d96",
+  "optimized": {
+    "@supabase/supabase-js": {
+      "src": "../../node_modules/@supabase/supabase-js/dist/index.mjs",
+      "file": "@supabase_supabase-js.js",
+      "fileHash": "d7df6dba",
+      "needsInterop": false
+    },
+    "lucide": {
+      "src": "../../node_modules/lucide/dist/esm/lucide.mjs",
+      "file": "lucide.js",
+      "fileHash": "413762dd",
+      "needsInterop": false
+    },
+    "pdf-lib": {
+      "src": "../../node_modules/pdf-lib/es/index.js",
+      "file": "pdf-lib.js",
+      "fileHash": "87f02510",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "rolldown-runtime-DC62tzP2": {
+      "file": "rolldown-runtime-DC62tzP2.js",
+      "isDynamicEntry": false
+    }
+  }
+}

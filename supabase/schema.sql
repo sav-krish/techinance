@@ -250,3 +250,47 @@ $$;
 
 revoke all on function public.reset_my_progress() from public, anon;
 grant execute on function public.reset_my_progress() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 6. Certificates
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.certificates (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid references auth.users on delete cascade,
+  student_name text not null,
+  student_email text not null,
+  course_id    text not null,
+  course_name  text not null default 'Financial Literacy',
+  pdf_path     text,
+  pdf_url      text,
+  status       text not null default 'pending',
+  resend_id    text,
+  error_message text,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists idx_certificates_user_course on public.certificates(user_id, course_id);
+
+alter table public.certificates enable row level security;
+
+drop policy if exists "Users can view their own certificates" on public.certificates;
+create policy "Users can view their own certificates"
+  on public.certificates for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their own certificates" on public.certificates;
+create policy "Users can insert their own certificates"
+  on public.certificates for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own certificates" on public.certificates;
+create policy "Users can update their own certificates"
+  on public.certificates for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+revoke all on table public.certificates from public, anon;
+grant select, insert, update on table public.certificates to authenticated;
+
