@@ -1782,18 +1782,24 @@ export function mountStory(options) {
     }
 
     const actions = make("div", "story-ending-actions");
-    const certBtn = makeButton("story-button story-button-primary", "🎓 Claim Certificate");
-    certBtn.addEventListener("click", () => {
-      import("./certificate-generator.js").then((certMod) => {
-        const info = certMod.checkCourseCompletion(userId, episodeId);
-        certMod.showCertificateModal({
-          studentName: user?.name || "Learner",
-          studentEmail: user?.email || "",
-          courseId: info?.courseId || "financial-literacy",
-          courseTitle: info?.courseTitle || "Financial Literacy",
+
+    // Only show Claim Certificate button if user has completed 100% of all units in this course
+    import("./certificate-generator.js").then((certMod) => {
+      const info = certMod.checkCourseCompletion(userId, episodeId);
+      if (info && info.isCourseCompleted) {
+        const certBtn = makeButton("story-button story-button-primary", "🎓 Claim Certificate");
+        certBtn.addEventListener("click", () => {
+          certMod.showCertificateModal({
+            studentName: user?.name || "Learner",
+            studentEmail: user?.email || "",
+            courseId: info.courseId,
+            courseTitle: info.courseTitle,
+          });
         });
-      });
+        actions.prepend(certBtn);
+      }
     });
+
     const back = makeButton("story-button story-button-secondary", "Back to my learning");
     back.addEventListener("click", () => {
       clearPending();
@@ -1805,7 +1811,7 @@ export function mountStory(options) {
       updateHud(episode.startScene);
       goTo(episode.startScene);
     });
-    actions.append(certBtn, back, replay);
+    actions.append(back, replay);
     frameRef.foot.append(actions);
 
     return frameRef;

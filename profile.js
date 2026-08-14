@@ -644,7 +644,7 @@ function liveCourseCard(userId, course) {
   );
   head.append(iconWrap, heading);
 
-  if (unitsDone > 0) {
+  if (unitsDone >= course.units.length && course.units.length > 0) {
     const certBtn = el("button", "profile-course__cert-btn", "🎓 Certificate");
     certBtn.addEventListener("click", () => {
       import("./certificate-generator.js").then((certMod) => {

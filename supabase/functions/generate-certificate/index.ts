@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
-import { TEMPLATE_PDF_BASE64 } from "./template-base64.ts";
+import { COURSE_TEMPLATES_BASE64 } from "./template-base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +50,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const senderEmail = Deno.env.get("RESEND_SENDER_EMAIL") || "Techinance <onboarding@resend.dev>";
 
+    const targetCourseId = (courseId || "financial-literacy").toLowerCase();
     const displayCourse = courseName || "Financial Literacy";
     const formattedDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
@@ -57,18 +58,19 @@ serve(async (req) => {
       day: "numeric",
     });
 
-    // 1. Fetch base PDF template (or fallback to embedded template)
+    // 1. Fetch base PDF template (or fallback to embedded template for course)
     let templateBytes: Uint8Array;
+    const base64Template = COURSE_TEMPLATES_BASE64[targetCourseId] || COURSE_TEMPLATES_BASE64["financial-literacy"];
     try {
-      const templateUrl = `${supabaseUrl}/storage/v1/object/public/certificates/template.pdf`;
+      const templateUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${targetCourseId}-template.pdf`;
       const pdfRes = await fetch(templateUrl);
       if (pdfRes.ok) {
         templateBytes = new Uint8Array(await pdfRes.arrayBuffer());
       } else {
-        templateBytes = base64ToUint8Array(TEMPLATE_PDF_BASE64);
+        templateBytes = base64ToUint8Array(base64Template);
       }
     } catch {
-      templateBytes = base64ToUint8Array(TEMPLATE_PDF_BASE64);
+      templateBytes = base64ToUint8Array(base64Template);
     }
 
     // 2. Load PDF document with pdf-lib

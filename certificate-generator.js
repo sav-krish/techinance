@@ -263,7 +263,8 @@ export async function showCertificateModal(info) {
 
   let pdfBytesRef;
   try {
-    pdfBytesRef = await generateCertificatePdfBytes(info.studentName, info.courseTitle);
+    const templatePdf = COURSE_DEFINITIONS[info.courseId]?.templatePdf || TEMPLATE_PDF_SRC;
+    pdfBytesRef = await generateCertificatePdfBytes(info.studentName, info.courseTitle, templatePdf);
     const blob = new Blob([pdfBytesRef], { type: "application/pdf" });
     const pdfUrl = URL.createObjectURL(blob);
 
