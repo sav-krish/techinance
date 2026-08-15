@@ -23,7 +23,7 @@ export const COURSE_DEFINITIONS = {
     title: "Financial Literacy",
     description: "gaining essential knowledge in money management, budgeting, and financial planning.",
     episodes: ["fin-u1", "fin-u2", "fin-u3", "fin-u4"],
-    templatePdf: "certificate-template.pdf",
+    templatePdf: "finance-certificate-template.pdf",
   },
   "cybersecurity": {
     id: "cybersecurity",
@@ -48,7 +48,7 @@ export const COURSE_DEFINITIONS = {
   },
 };
 
-const TEMPLATE_PDF_SRC = "certificate-template.pdf";
+const TEMPLATE_PDF_SRC = "finance-certificate-template.pdf";
 
 /**
  * Checks if a user has completed ALL episodes in a course.
