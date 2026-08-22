@@ -272,11 +272,11 @@ export async function showCertificateModal(info) {
     </p>
 
     <div id="cert-pdf-container" style="margin: 0 auto 20px auto; max-width: 100%; height: 380px; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #020617; display: flex; align-items: center; justify-content: center;">
-      <div style="color: #94a3b8; font-size: 14px;">Generating your PDF certificate...</div>
+      <div style="color: #94a3b8; font-size: 14px;">Checking your progress...</div>
     </div>
 
     <div id="cert-email-status" style="margin-bottom: 20px; font-size: 14px; color: #38bdf8; min-height: 20px;">
-      🚀 Auto-emailing certificate via Resend...
+      Checking your progress...
     </div>
 
     <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
