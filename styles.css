@@ -15,6 +15,10 @@
   --card-shadow: 0 14px 40px rgba(11, 36, 71, 0.07);
   --card-shadow-lift: 0 20px 48px rgba(11, 36, 71, 0.11);
   --content-width: min(1100px, calc(100% - 48px));
+  /* The site header is fixed, so main is padded by this to clear it. The
+     home hero subtracts the same value to fill exactly the rest of the
+     viewport; keeping one variable stops the two drifting apart. */
+  --header-offset: 72px;
 }
 
 @supports not (background: color-mix(in srgb, red 50%, white)) {
@@ -460,18 +464,21 @@ a:focus-visible {
 }
 
 .stats {
-  padding: 0 24px 48px;
+  /* Above the card is this padding; below it is the next section's own
+     --section-y. Using --section-y here and zero underneath makes the two gaps
+     identical at every width, instead of the card sitting high in its band. */
+  padding: var(--section-y) 24px 0;
   background: transparent;
 }
 
 .home-page main {
   display: block;
-  padding-top: 72px;
+  padding-top: var(--header-offset);
   min-height: auto;
 }
 
 .home-page .hero {
-  min-height: calc(100svh - 220px);
+  min-height: calc(100svh - var(--header-offset));
 }
 
 /* Scroll story ------------------------------------------------------------ */
@@ -484,7 +491,6 @@ a:focus-visible {
   --story-tech-opacity: 0;
   --story-finance-opacity: 0;
   --story-neuro-opacity: 0;
-  --story-partnership-opacity: 0;
   position: relative;
   /* The sticky scene needs the page as its scroll container. Clipping this
      parent makes the scene scroll away and leaves only the navy backdrop. */
@@ -557,48 +563,30 @@ a:focus-visible {
   justify-content: space-between;
 }
 
-.scroll-story__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.scroll-story__meta p {
-  margin: 0;
-}
-
-.scroll-story__meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.scroll-story__meta span::after {
-  width: 30px;
-  height: 1px;
-  background: currentColor;
-  content: "";
-}
-
 .scroll-story__frame {
   display: grid;
   gap: 16px;
   margin: auto 0;
 }
 
+/* Solid fills, not translucent ones. These cards pass over each other as the
+   scene plays, and anything see-through lets the card underneath show through
+   the one on top. Opaque also means no backdrop-filter, which is what made the
+   scene stutter: a blur on four elements that move every frame forces the
+   compositor to re-sample the backdrop behind each one. */
 .scroll-story__panel,
 .scroll-story__orbit {
   border: 1px solid rgba(255, 255, 255, 0.17);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 24px 70px rgba(1, 14, 32, 0.26);
-  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 70px rgba(1, 14, 32, 0.32);
+}
+
+.scroll-story__panel {
+  background: #23406a;
+}
+
+.scroll-story__orbit {
+  background: #16305a;
 }
 
 .scroll-story__panel {
@@ -692,15 +680,6 @@ a:focus-visible {
   line-height: 1.4;
 }
 
-.scroll-story__partnership {
-  margin: 24px 0 0 auto;
-  max-width: 38ch;
-  color: rgba(255, 255, 255, 0.74);
-  font-size: 14px;
-  line-height: 1.55;
-  text-align: right;
-}
-
 @media (min-width: 721px) {
   .scroll-story--enhanced {
     height: 250vh;
@@ -724,7 +703,10 @@ a:focus-visible {
     z-index: 4;
     top: 50%;
     left: 50%;
-    width: min(560px, 54vw);
+    /* Panel + the two side cards have to fit across the viewport without
+       touching. At 54vw a panel and two 23vw cards consume the full width, so
+       the side cards were forced to overlap. */
+    width: min(520px, 46vw);
     will-change: transform;
     transform: translate(-50%, -50%) var(--story-panel-transform);
   }
@@ -740,7 +722,7 @@ a:focus-visible {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: min(248px, 23vw);
+    width: min(240px, 18vw);
     min-height: 174px;
     opacity: 0;
     will-change: transform, opacity;
@@ -764,18 +746,33 @@ a:focus-visible {
     transform: translate(-50%, -50%) var(--story-neuro-transform);
   }
 
-  .scroll-story--enhanced .scroll-story__partnership {
-    opacity: var(--story-partnership-opacity);
+}
+
+/* The panel's type is sized off viewport width, so a wide but short window gets
+   a full-size panel in half the vertical room and squeezes the card below it.
+   Trim both when the window is short. */
+@media (min-width: 721px) and (max-height: 800px) {
+  .scroll-story--enhanced .scroll-story__panel {
+    padding: clamp(22px, 2.6vw, 34px);
+  }
+
+  .scroll-story--enhanced .scroll-story__panel h2 {
+    font-size: clamp(30px, 3.4vw, 46px);
+  }
+
+  .scroll-story--enhanced .scroll-story__panel > p:not(.scroll-story__eyebrow) {
+    margin-top: 14px;
+    font-size: 15px;
+  }
+
+  .scroll-story--enhanced .scroll-story__orbit {
+    min-height: 140px;
   }
 }
 
 @media (max-width: 720px) {
   .scroll-story__inner {
     width: min(100% - 36px, 620px);
-  }
-
-  .scroll-story__meta span {
-    display: none;
   }
 
   .scroll-story__frame {
@@ -795,10 +792,6 @@ a:focus-visible {
     min-height: 120px;
   }
 
-  .scroll-story__partnership {
-    margin-left: 0;
-    text-align: left;
-  }
 }
 
 .stats__inner {
@@ -1090,11 +1083,14 @@ a.feature-card {
   gap: 12px;
 }
 
+/* The card is a sidebar to the whole block, not to the last paragraph. Keeping
+   the heading in the left column and top-aligning both means the card lines up
+   with the heading instead of floating beside a short paragraph. */
 .about-teaser__body {
   display: grid;
-  gap: 28px;
+  gap: 40px;
   align-items: start;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
 }
 
 .about-teaser__copy p {
@@ -1109,11 +1105,41 @@ a.feature-card {
   margin-bottom: 0;
 }
 
+.about-teaser__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.about-teaser__copy .section__header {
+  margin-bottom: 0;
+}
+
+.about-teaser__copy p {
+  margin: 0;
+}
+
 .about-teaser__aside {
   border-radius: var(--card-radius);
   padding: 28px 26px;
   background: var(--white);
   box-shadow: var(--card-shadow);
+}
+
+.about-teaser__aside strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--navy);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.about-teaser__aside p {
+  margin: 0;
+  color: var(--slate);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .about-teaser__aside p {
@@ -1777,6 +1803,7 @@ a.feature-card {
   }
 
   .about-teaser__body {
+    gap: 28px;
     grid-template-columns: 1fr;
   }
 }
@@ -1862,11 +1889,10 @@ a.feature-card {
 
   .hero {
     min-height: auto;
-    padding: 96px 16px 24px;
-  }
-
-  .home-page .hero {
-    min-height: calc(100svh - 180px);
+    /* main already clears the fixed header via --header-offset, so this only
+       needs inner breathing room. Keep it symmetric or the centred content
+       sits visibly low in the full-height hero. */
+    padding: 48px 16px 48px;
   }
 
   .hero__actions {
@@ -1878,7 +1904,9 @@ a.feature-card {
   }
 
   .stats {
-    padding: 12px 16px 40px;
+    /* Matches the 56px the sibling .section drops to at this breakpoint, so the
+       gaps above and below the card stay equal here too. */
+    padding: 56px 16px 0;
   }
 
   .stats__inner {
@@ -1913,6 +1941,7 @@ a.feature-card {
   }
 
   .about-teaser__body {
+    gap: 28px;
     grid-template-columns: 1fr;
   }
 

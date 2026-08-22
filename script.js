@@ -771,6 +771,85 @@ function setupScrollStory() {
   const story = scrollStory;
 
   let frame = 0;
+  /** Cached end offset for the side cards, in px. Invalidated on resize. */
+  let sideOffset = 0;
+  /** Cached end drop for the bottom card. Invalidated on resize. */
+  let drop = { offset: 0, scale: 1 };
+
+  const PANEL_END_SCALE = 1.055;
+  const CARD_END_ROTATION = 5;
+  const NEURO_END_ROTATION = 2;
+
+  /**
+   * How far the two side cards travel from centre by the end of the scene.
+   *
+   * Derived from the measured widths rather than a fixed vw value: the panel is
+   * `min(520px, 46vw)` and the cards `min(240px, 18vw)`, so their ratio changes
+   * across breakpoints. A constant that clears the panel on a laptop either
+   * overlaps it on a narrow window or flings the cards into the far corners on
+   * a wide one.
+   *
+   * @returns {number}
+   */
+  function measureSideOffset() {
+    const panel = story.querySelector(".scroll-story__panel");
+    const card = story.querySelector(".scroll-story__orbit");
+    if (!(panel instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+      return 0;
+    }
+    const radians = (CARD_END_ROTATION * Math.PI) / 180;
+    const panelHalf = (panel.offsetWidth * PANEL_END_SCALE) / 2;
+    // A rotated card covers more width than it measures.
+    const cardHalf =
+      (card.offsetWidth * Math.cos(radians) + card.offsetHeight * Math.sin(radians)) / 2;
+    const gap = clamp(window.innerWidth * 0.03, 16, 56);
+    // Never push a card past the viewport edge, even if that costs some gap.
+    const room = window.innerWidth / 2 - cardHalf - 16;
+    return Math.max(Math.min(panelHalf + cardHalf + gap, room), 0);
+  }
+
+  /**
+   * Where the bottom card ends up, and how big it is when it gets there.
+   *
+   * Measured for the same reason as the side offset: the sticky scene is
+   * 100svh, so a fixed vh value that leaves a decent margin on a tall window
+   * runs the card into the bottom edge on a short one. This sits the card as
+   * low as it can while keeping that margin, and the gap to the panel above is
+   * whatever remains, which is the right trade when space runs short.
+   *
+   * @returns {{ offset: number, scale: number }}
+   */
+  function measureDrop() {
+    const panel = story.querySelector(".scroll-story__panel");
+    const card = story.querySelector(".scroll-story__orbit--neuroscience");
+    const sticky = story.querySelector(".scroll-story__sticky");
+    if (
+      !(panel instanceof HTMLElement) ||
+      !(card instanceof HTMLElement) ||
+      !(sticky instanceof HTMLElement)
+    ) {
+      return { offset: 0, scale: 1 };
+    }
+    const scene = sticky.offsetHeight;
+    const radians = (NEURO_END_ROTATION * Math.PI) / 180;
+    // Rotated, so its height covers a little of its width too.
+    const cardHeight =
+      card.offsetHeight * Math.cos(radians) + card.offsetWidth * Math.sin(radians);
+    // Where the panel's lower edge sits once it has grown and drifted upwards,
+    // measured from the centre of the scene.
+    const panelBottom = (panel.offsetHeight * PANEL_END_SCALE) / 2 - scene * 0.035;
+    const gap = clamp(scene * 0.03, 16, 40);
+    const margin = clamp(scene * 0.04, 20, 56);
+    // Clearing the panel comes first. Whatever vertical room is left over after
+    // that and the bottom margin is all the card gets, so on a short window it
+    // shrinks rather than sliding back under the panel.
+    const room = scene / 2 - margin - panelBottom - gap;
+    const scale = clamp(room / cardHeight, 0.55, 1);
+    // On a tall window there is room to spare. Splitting it evenly keeps the
+    // card centred in its band instead of tucked under the panel.
+    const spare = Math.max(room - cardHeight * scale, 0) / 2;
+    return { offset: panelBottom + gap + spare + (cardHeight * scale) / 2, scale };
+  }
 
   /**
    * @param {string} name
@@ -783,7 +862,7 @@ function setupScrollStory() {
   function setOrbit(name, x, y, rotation, scale) {
     story.style.setProperty(
       `--story-${name}-transform`,
-      `translate3d(${x.toFixed(2)}vw, ${y.toFixed(2)}vh, 0) rotate(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
+      `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
     );
   }
 
@@ -792,6 +871,10 @@ function setupScrollStory() {
    */
   function update() {
     frame = 0;
+    if (sideOffset === 0) {
+      sideOffset = measureSideOffset();
+      drop = measureDrop();
+    }
     const viewport = window.innerHeight || 1;
     const bounds = story.getBoundingClientRect();
     const travel = Math.max(story.offsetHeight - viewport, 1);
@@ -804,32 +887,28 @@ function setupScrollStory() {
     );
     setOrbit(
       "tech",
-      interpolate(0, -27, eased),
-      interpolate(14, -15, eased),
-      interpolate(-3, -9, eased),
+      interpolate(0, -sideOffset, eased),
+      interpolate(viewport * 0.14, viewport * -0.15, eased),
+      interpolate(-3, -CARD_END_ROTATION, eased),
       interpolate(0.88, 1, eased),
     );
     setOrbit(
       "finance",
-      interpolate(0, 28, eased),
-      interpolate(14, -9, eased),
-      interpolate(3, 8, eased),
+      interpolate(0, sideOffset, eased),
+      interpolate(viewport * 0.14, viewport * -0.09, eased),
+      interpolate(3, CARD_END_ROTATION, eased),
       interpolate(0.88, 1, eased),
     );
     setOrbit(
       "neuro",
-      interpolate(0, 0, eased),
-      interpolate(18, 38, eased),
-      interpolate(0, -2, eased),
-      interpolate(0.88, 1, eased),
+      0,
+      interpolate(viewport * 0.18, drop.offset, eased),
+      interpolate(0, -NEURO_END_ROTATION, eased),
+      interpolate(0.88 * drop.scale, drop.scale, eased),
     );
     story.style.setProperty("--story-tech-opacity", String(clamp(progress * 3.2, 0, 1)));
     story.style.setProperty("--story-finance-opacity", String(clamp((progress - 0.06) * 3.2, 0, 1)));
     story.style.setProperty("--story-neuro-opacity", String(clamp((progress - 0.12) * 3.2, 0, 1)));
-    story.style.setProperty(
-      "--story-partnership-opacity",
-      String(clamp((progress - 0.42) * 2.2, 0, 1)),
-    );
   }
 
   /**
@@ -844,7 +923,10 @@ function setupScrollStory() {
   story.classList.add("scroll-story--enhanced");
   update();
   window.addEventListener("scroll", requestUpdate, { passive: true });
-  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("resize", () => {
+    sideOffset = 0;
+    requestUpdate();
+  });
 }
 
 setupScrollStory();

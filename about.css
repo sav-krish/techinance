@@ -93,13 +93,16 @@
 
 .mission__item {
   display: grid;
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 56px 1fr;
   align-items: start;
   gap: 18px;
   border: 1px solid rgba(11, 36, 71, 0.08);
   border-radius: var(--card-radius);
   padding: 24px 26px;
-  background: var(--soft-surface);
+  /* White, so the icon's ice-blue disc reads against it the way it does on the
+     home page's "why" cards. */
+  background: var(--white);
+  box-shadow: var(--card-shadow);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
@@ -109,17 +112,18 @@
   transform: translateY(-2px);
 }
 
-.mission__number {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  place-items: center;
-  border-radius: 14px;
-  color: var(--white);
-  background: var(--navy);
-  font-family: "Nunito", sans-serif;
-  font-size: 20px;
-  font-weight: 800;
+/* Same illustration treatment as the home page's "why" cards: an ice disc,
+   navy line art, and one steel accent. No badge behind it. */
+.mission__icon {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.mission__icon svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .mission__item h3 {
@@ -143,20 +147,27 @@
 
 .people {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin: 24px 0 0;
+  /* The row gap and top margin have to clear the portrait, which hangs half its
+     height above each card. */
+  gap: 78px 20px;
+  margin: 76px 0 0;
   padding: 0;
+  grid-template-columns: repeat(4, 1fr);
   list-style: none;
 }
 
 .person {
   display: flex;
+  position: relative;
   flex-direction: column;
-  border-radius: var(--card-radius);
-  padding: 12px;
-  background: var(--soft-surface);
+  align-items: center;
   border: 1px solid rgba(11, 36, 71, 0.06);
+  border-radius: var(--card-radius);
+  /* Top padding is the half-portrait that overlaps the card, plus breathing. */
+  padding: 68px 18px 26px;
+  background: var(--white);
+  box-shadow: var(--card-shadow);
+  text-align: center;
   transition: box-shadow 180ms ease, transform 180ms ease;
 }
 
@@ -165,13 +176,19 @@
   transform: translateY(-2px);
 }
 
+/* The portrait is a circle sitting half above the card. The ring matches the
+   panel behind it so the circle reads as resting on top of the card. */
 .person__art {
-  display: grid;
-  aspect-ratio: 4 / 5;
-  place-items: center;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--ice) 55%, var(--white));
+  position: absolute;
+  top: -52px;
+  left: 50%;
+  width: 104px;
+  height: 104px;
   overflow: hidden;
+  border: 4px solid var(--white);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ice) 55%, var(--white));
+  transform: translateX(-50%);
 }
 
 @supports not (background: color-mix(in srgb, red 50%, white)) {
@@ -207,7 +224,7 @@
 }
 
 .person__name {
-  margin: 14px 4px 0;
+  margin: 0;
   color: var(--navy);
   font-family: "Nunito", sans-serif;
   font-size: 18px;
@@ -216,7 +233,7 @@
 }
 
 .person__role {
-  margin: 4px 4px 0;
+  margin: 6px 0 0;
   color: var(--steel);
   font-size: 12px;
   font-weight: 700;
@@ -225,7 +242,7 @@
 }
 
 .person__note {
-  margin: 8px 4px 8px;
+  margin: 12px 0 0;
   color: var(--slate);
   font-size: 15px;
   line-height: 1.55;
@@ -236,6 +253,12 @@
 @media (max-width: 860px) {
   .people {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 460px) {
+  .people {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -250,15 +273,14 @@
   }
 
   .mission__item {
-    grid-template-columns: 38px 1fr;
+    grid-template-columns: 44px 1fr;
     gap: 14px;
     padding: 18px;
   }
 
-  .mission__number {
-    width: 38px;
-    height: 38px;
-    font-size: 17px;
+  .mission__icon {
+    width: 44px;
+    height: 44px;
   }
 
 }
