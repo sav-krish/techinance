@@ -1083,28 +1083,6 @@ a.feature-card {
   gap: 12px;
 }
 
-/* The card is a sidebar to the whole block, not to the last paragraph. Keeping
-   the heading in the left column and top-aligning both means the card lines up
-   with the heading instead of floating beside a short paragraph. */
-.about-teaser__body {
-  display: grid;
-  gap: 40px;
-  align-items: start;
-  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
-}
-
-.about-teaser__copy p {
-  margin: 0 0 16px;
-  max-width: 42em;
-  color: var(--slate);
-  font-size: 17px;
-  line-height: 1.65;
-}
-
-.about-teaser__copy p:last-child {
-  margin-bottom: 0;
-}
-
 .about-teaser__copy {
   display: flex;
   flex-direction: column;
@@ -1112,50 +1090,8 @@ a.feature-card {
   gap: 20px;
 }
 
-.about-teaser__copy .section__header {
-  margin-bottom: 0;
-}
-
 .about-teaser__copy p {
   margin: 0;
-}
-
-.about-teaser__aside {
-  border-radius: var(--card-radius);
-  padding: 28px 26px;
-  background: var(--white);
-  box-shadow: var(--card-shadow);
-}
-
-.about-teaser__aside strong {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--navy);
-  font-size: 17px;
-  line-height: 1.3;
-}
-
-.about-teaser__aside p {
-  margin: 0;
-  color: var(--slate);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.about-teaser__aside p {
-  margin: 0;
-  color: var(--slate);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.about-teaser__aside strong {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--navy);
-  font-family: "Nunito", sans-serif;
-  font-size: 18px;
-  font-weight: 700;
 }
 
 .stats__value {
@@ -1801,11 +1737,6 @@ a.feature-card {
   .feature-grid--why > li:last-child {
     border-bottom: 0;
   }
-
-  .about-teaser__body {
-    gap: 28px;
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 720px) {
@@ -1938,11 +1869,6 @@ a.feature-card {
 
   .feature-card--why {
     flex-direction: row;
-  }
-
-  .about-teaser__body {
-    gap: 28px;
-    grid-template-columns: 1fr;
   }
 
   .home-cta__actions .button {
