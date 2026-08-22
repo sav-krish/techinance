@@ -111,7 +111,7 @@
   border: 1px solid var(--learn-line);
   border-radius: var(--learn-radius);
   padding: 28px;
-  background: var(--soft-surface);
+  background: var(--white);
   box-shadow: var(--learn-shadow);
 }
 
@@ -222,7 +222,7 @@
   border: 1px solid var(--learn-line);
   border-radius: var(--learn-radius);
   padding: 24px;
-  background: color-mix(in srgb, var(--ice) 20%, var(--white));
+  background: var(--white);
   box-shadow: var(--learn-shadow);
 }
 
@@ -751,7 +751,7 @@
   border: 1px solid var(--learn-line-strong);
   border-radius: var(--learn-radius);
   padding: 24px;
-  background: color-mix(in srgb, var(--ice) 18%, var(--white));
+  background: var(--white);
 }
 
 .profile-reset__title {

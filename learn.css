@@ -433,7 +433,7 @@
   border: 1px solid var(--learn-line);
   border-radius: var(--learn-radius);
   padding: 32px 28px;
-  background: color-mix(in srgb, var(--ice) 32%, var(--white));
+  background: var(--white);
   box-shadow: var(--learn-shadow);
   text-align: center;
 }
@@ -3980,7 +3980,7 @@ body.story-page .story-message__action:focus-visible {
 .learn-hero__shell {
   border-radius: var(--section-radius, 32px);
   padding: clamp(28px, 4vw, 44px) clamp(24px, 4vw, 40px);
-  background: var(--soft-surface, #eef4fa);
+  background: var(--white);
   border: 1px solid rgba(11, 36, 71, 0.06);
   box-shadow: var(--learn-shadow);
   text-align: center;
@@ -4027,7 +4027,7 @@ body.story-page .story-message__action:focus-visible {
   align-self: stretch;
   border-radius: var(--card-radius, 24px);
   padding: 28px 24px;
-  background: var(--soft-surface, #eef4fa);
+  background: var(--white);
   box-shadow: none;
 }
 
@@ -4044,7 +4044,7 @@ body.story-page .story-message__action:focus-visible {
 .learn-account__shell {
   border-radius: var(--section-radius, 32px);
   padding: clamp(24px, 3vw, 36px);
-  background: var(--soft-surface, #eef4fa);
+  background: var(--white);
   border: 1px solid rgba(11, 36, 71, 0.06);
   box-shadow: var(--learn-shadow);
 }
@@ -4067,7 +4067,7 @@ body.story-page .story-message__action:focus-visible {
 .learn-stat {
   border-radius: 18px;
   padding: 18px;
-  background: var(--soft-surface, #eef4fa);
+  background: var(--white);
   border: 1px solid rgba(11, 36, 71, 0.06);
   box-shadow: none;
 }

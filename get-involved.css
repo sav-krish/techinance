@@ -44,7 +44,7 @@
   border: 1px solid rgba(11, 36, 71, 0.08);
   border-radius: var(--card-radius);
   padding: 32px;
-  background: var(--soft-surface);
+  background: var(--white);
   box-shadow: var(--card-shadow);
 }
 
