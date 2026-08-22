@@ -250,3 +250,48 @@ $$;
 
 revoke all on function public.reset_my_progress() from public, anon;
 grant execute on function public.reset_my_progress() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 6. Certificates
+-- ---------------------------------------------------------------------------
+--
+-- A row here is the record that a certificate was earned, so nothing but the
+-- `generate-certificate` edge function writes it. That function verifies the
+-- caller's token and reads episode_progress before issuing. Granting insert or
+-- update to `authenticated`, as an earlier draft did, would let any signed-in
+-- learner award themselves one straight through the REST API and skip the
+-- completion check entirely.
+
+create table if not exists public.certificates (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users on delete cascade,
+  student_name  text not null,
+  student_email text not null,
+  course_id     text not null,
+  course_name   text not null,
+  pdf_path      text,
+  pdf_url       text,
+  status        text not null default 'issued'
+    check (status in ('issued', 'delivered', 'failed')),
+  error_message text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+-- One per learner per course, and the conflict target the function upserts on.
+create unique index if not exists certificates_user_course_key
+  on public.certificates (user_id, course_id);
+
+alter table public.certificates enable row level security;
+
+-- Read your own, and nothing else. No insert or update policy on purpose.
+drop policy if exists "Users can view their own certificates" on public.certificates;
+create policy "Users can view their own certificates"
+  on public.certificates for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their own certificates" on public.certificates;
+drop policy if exists "Users can update their own certificates" on public.certificates;
+
+revoke all on table public.certificates from public, anon, authenticated;
+grant select on table public.certificates to authenticated;
