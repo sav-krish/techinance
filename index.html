@@ -204,7 +204,11 @@
         </div>
       </section>
 
-      <section class="stats" aria-label="Techinance reach" id="impact" data-stats>
+      <section class="stats" aria-labelledby="stats-title" id="impact" data-stats>
+        <header class="section__header section__header--center stats__head">
+          <p class="eyebrow">Our reach</p>
+          <h2 id="stats-title">Where Techinance has got to</h2>
+        </header>
         <div class="stats__inner">
           <article class="stats__item">
             <p class="stats__value">1050+</p>
@@ -225,22 +229,33 @@
 
       <section class="section section--soft home-section" aria-labelledby="about-teaser-title">
         <div class="section__inner">
-          <div class="section__shell">
-            <header class="section__header">
-              <p class="eyebrow">About us</p>
-              <h2 id="about-teaser-title">Free STEM education, built for students</h2>
-              <p class="section__lede">
-                A registered 501(c)(3) nonprofit, run entirely by volunteers who
-                were students not long ago.
-              </p>
-            </header>
-            <div class="about-teaser__copy">
-              <p>
-                We offer interactive courses and Story Mode adventures so students can
-                apply what they learn instead of just memorizing slides.
-              </p>
-              <a class="button button--secondary" href="about.html">Learn more about us</a>
+          <div class="section__shell about-teaser">
+            <div class="about-teaser__text">
+              <header class="section__header">
+                <p class="eyebrow">About us</p>
+                <h2 id="about-teaser-title">Free STEM education, built for students</h2>
+                <p class="section__lede">
+                  A registered 501(c)(3) nonprofit, run entirely by volunteers who
+                  were students not long ago.
+                </p>
+              </header>
+              <div class="about-teaser__copy">
+                <p>
+                  We offer interactive courses and Story Mode adventures so students can
+                  apply what they learn instead of just memorizing slides.
+                </p>
+                <a class="button button--secondary" href="about.html">Learn more about us</a>
+              </div>
             </div>
+            <img
+              class="about-teaser__mark"
+              src="logo.png"
+              alt=""
+              aria-hidden="true"
+              width="180"
+              height="180"
+              loading="lazy"
+            />
           </div>
         </div>
       </section>

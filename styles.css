@@ -794,6 +794,10 @@ a:focus-visible {
 
 }
 
+.stats__head {
+  margin-bottom: 32px;
+}
+
 .stats__inner {
   display: grid;
   width: min(960px, 100%);
@@ -1085,15 +1089,44 @@ a.feature-card {
   gap: 12px;
 }
 
+/* Text on the left, the mark on the right. `auto` on the second track lets the
+   logo take only what it needs, so the copy keeps the rest. */
+.about-teaser {
+  display: grid;
+  gap: clamp(20px, 3vw, 40px);
+  align-items: center;
+  /* A sized second track rather than `auto`, so the mark can sit at the start
+     of its column instead of hard against the card's right edge. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.42fr);
+}
+
+.about-teaser__mark {
+  /* See .about__block-mark: the source file is a dark square, clipped round
+     everywhere else it appears. */
+  justify-self: start;
+  width: clamp(120px, 19vw, 240px);
+  height: auto;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
 .about-teaser__copy {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 20px;
+  margin-top: 20px;
 }
 
+/* Matches .section__lede. Left to the browser default this paragraph came out
+   16px navy with no line-height, next to an 18px slate lede, which is what made
+   the block look like two different typefaces. */
 .about-teaser__copy p {
   margin: 0;
+  color: var(--slate);
+  font-size: clamp(16px, 2vw, 18px);
+  line-height: 1.65;
 }
 
 .stats__value {
@@ -1863,6 +1896,16 @@ a.feature-card {
 
   .section--soft .section__shell {
     padding: 32px 20px;
+  }
+
+  .about-teaser {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .about-teaser__mark {
+    width: 96px;
+    order: -1;
   }
 
   .feature-grid--3 {

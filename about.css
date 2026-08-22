@@ -50,6 +50,28 @@
   box-shadow: var(--card-shadow);
 }
 
+/* Text on the left, the mark on the right. Only the "What We Do" block opts in;
+   the mission and team blocks are full-width lists. */
+.about__block--logo {
+  display: grid;
+  gap: clamp(18px, 3vw, 36px);
+  align-items: center;
+  /* Sized rather than `auto` so the mark sits at the start of its column
+     instead of hard against the card's right edge. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.42fr);
+}
+
+.about__block-mark {
+  /* The source file is a dark square. Every other placement clips it to a
+     circle, and left square it reads as a navy slab on a white card. */
+  justify-self: start;
+  width: clamp(120px, 18vw, 220px);
+  height: auto;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
 .about__block:first-of-type {
   margin-top: 0;
 }
@@ -270,6 +292,16 @@
   .about__block {
     margin-top: 28px;
     padding: 24px 18px;
+  }
+
+  .about__block--logo {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .about__block-mark {
+    width: 88px;
+    order: -1;
   }
 
   .mission__item {
