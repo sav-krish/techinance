@@ -34,7 +34,34 @@ import {
 /** @typedef {{ isCurrentUser: boolean, name: string, xp: number, badges: number, episodes: number }} BoardRow */
 
 /** Episodes whose progress is worth syncing. Unknown ids are ignored. */
-const EPISODE_IDS = ["cyber-u1", "cyber-u2", "cyber-u3", "cyber-u4", "fin-u1", "fin-u4"];
+/**
+ * Episodes whose progress is allowed to reach the database.
+ *
+ * An allowlist rather than "whatever localStorage holds", so a tampered store
+ * cannot invent episode rows. It has to list every episode that actually
+ * exists: anything missing here never syncs, which silently undercounts
+ * leaderboard XP and makes the certificate check refuse learners who really did
+ * finish. A test keeps it in step with the episode registry.
+ */
+const EPISODE_IDS = [
+  "cyber-u1",
+  "cyber-u2",
+  "cyber-u3",
+  "cyber-u4",
+  "fin-u1",
+  "fin-u2",
+  "fin-u4",
+  "neuro-u1",
+  "neuro-u2",
+  "neuro-u3",
+  "neuro-u4",
+  "startup-u1",
+  "startup-u2",
+  "startup-u3",
+  "startup-u4",
+  "startup-u5",
+  "startup-u6",
+];
 
 /** Matches the CHECK constraint in supabase/schema.sql. */
 const MAX_EPISODE_XP = 2000;

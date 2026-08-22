@@ -62,6 +62,33 @@ function flush() {
   });
 }
 
+/**
+ * Pushes now and resolves once the write has landed.
+ *
+ * `flush()` is deliberately fire-and-forget, and pushes are debounced by four
+ * seconds, which is fine for background syncing. It is not fine for the
+ * certificate claim: the server reads episode_progress to decide whether the
+ * course is finished, so a learner who completes the last episode and clicks
+ * straight through would be told they have not finished. Await this first.
+ *
+ * @returns {Promise<void>}
+ */
+export async function flushProgressNow() {
+  if (pending) {
+    clearTimeout(pending);
+    pending = null;
+  }
+  if (!syncable(currentUserId) || hydrating) {
+    return;
+  }
+  try {
+    await pushProgress(currentUserId);
+  } catch {
+    // Offline or rejected. The caller decides what to do about it; the local
+    // store is unaffected either way.
+  }
+}
+
 /** @returns {void} */
 function schedulePush() {
   if (!syncable(currentUserId)) {

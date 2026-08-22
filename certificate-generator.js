@@ -19,6 +19,7 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { getUser } from "./auth.js";
 import { getProgress } from "./progress.js";
+import { flushProgressNow } from "./progress-sync.js";
 import { isRemoteEnabled, supabase } from "./supabase.js";
 import { SUPABASE_URL } from "./supabase-config.js";
 
@@ -182,6 +183,11 @@ export async function triggerRemoteCertificateService(options) {
   if (!session?.access_token) {
     return { ok: false, refused: true, error: "Sign in to claim your certificate." };
   }
+
+  // The server decides from episode_progress, and background syncing is
+  // debounced, so the episode just finished may not have landed yet. Push
+  // before asking or a genuine finisher gets told they have not finished.
+  await flushProgressNow();
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-certificate`, {

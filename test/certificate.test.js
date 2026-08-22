@@ -119,3 +119,23 @@ test("the browser and the server agree on what each course requires", () => {
     );
   }
 });
+
+test("every episode that exists is allowed to sync to the database", async () => {
+  // supabase.js keeps an allowlist of episode ids it will push. Anything left
+  // out never reaches episode_progress, which undercounts leaderboard XP and
+  // makes the server-side certificate check refuse learners who did finish.
+  // This list had gone stale: it still named the six episodes that existed when
+  // it was written, so three of the four courses could never be certified.
+  const { EPISODES } = await import("./episode-ids.js");
+  const source = readFileSync(new URL("../supabase.js", import.meta.url), "utf8");
+  const block = source.slice(source.indexOf("const EPISODE_IDS"));
+  const listed = new Set(
+    [...block.slice(0, block.indexOf("]")).matchAll(/"([^"]+)"/g)].map((m) => m[1]),
+  );
+
+  const missing = [...EPISODES].filter((id) => !listed.has(id));
+  assert.deepEqual(missing, [], "episodes that exist but never sync");
+
+  const unknown = [...listed].filter((id) => !EPISODES.has(id));
+  assert.deepEqual(unknown, [], "sync allowlist naming episodes that do not exist");
+});
