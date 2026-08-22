@@ -644,7 +644,10 @@ function liveCourseCard(userId, course) {
   );
   head.append(iconWrap, heading);
 
-  if (unitsDone >= course.units.length && course.units.length > 0) {
+  // Against `playable`, not `course.units`. Financial Literacy declares four
+  // units but unit 3 was never written, so a learner can finish at most three
+  // and this button would never have appeared for that course.
+  if (playable.length > 0 && unitsDone >= playable.length) {
     const certBtn = el("button", "profile-course__cert-btn", "🎓 Certificate");
     certBtn.addEventListener("click", () => {
       import("./certificate-generator.js").then((certMod) => {

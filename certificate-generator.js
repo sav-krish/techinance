@@ -125,7 +125,15 @@ export async function generateCertificatePdfBytes(name, templatePdfSrc = TEMPLAT
   // 2. Render student's name in dark navy TimesRomanItalic font
   const font = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
   const studentName = name && name.trim() ? name.trim() : "Learner";
-  const fontSize = studentName.length > 25 ? 26 : studentName.length > 18 ? 32 : 38;
+  // Measure and shrink rather than guessing from character count. Stepping on
+  // length alone let "Priya Raghunathan" run 29pt past the patch that covers
+  // the template's {Name} placeholder, and a long name 139pt past it. The edge
+  // function does the same, so the download matches the emailed copy.
+  let fontSize = 38;
+  const maxWidth = width * 0.32;
+  while (fontSize > 16 && font.widthOfTextAtSize(studentName, fontSize) > maxWidth) {
+    fontSize -= 1;
+  }
   const nameWidth = font.widthOfTextAtSize(studentName, fontSize);
 
   page.drawText(studentName, {
