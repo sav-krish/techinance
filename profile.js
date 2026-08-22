@@ -100,7 +100,12 @@ const COURSES = [
         episodeId: "fin-u2",
         playable: true,
       },
-      { unit: 3, title: "Coming soon", episodeId: "fin-u3", playable: false },
+      {
+        unit: 3,
+        title: "Taxes, Interest, and Insurance",
+        episodeId: "fin-u3",
+        playable: true,
+      },
       {
         unit: 4,
         title: "Investing, Savings, and Retirement",
@@ -377,6 +382,7 @@ async function loadEpisodeMeta() {
       import("./content/cyber-unit4.js"),
       import("./content/finance-unit1.js"),
       import("./content/finance-unit2.js"),
+      import("./content/finance-unit3.js"),
       import("./content/finance-unit4.js"),
       import("./content/neuro-unit1.js"),
       import("./content/neuro-unit2.js"),

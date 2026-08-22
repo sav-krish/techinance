@@ -50,6 +50,7 @@ const EPISODE_IDS = [
   "cyber-u4",
   "fin-u1",
   "fin-u2",
+  "fin-u3",
   "fin-u4",
   "neuro-u1",
   "neuro-u2",

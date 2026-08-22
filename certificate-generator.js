@@ -30,10 +30,7 @@ export const COURSE_DEFINITIONS = {
     id: "financial-literacy",
     title: "Financial Literacy",
     description: "gaining essential knowledge in money management, budgeting, and financial planning.",
-    // Unit 3 (taxes) has never been written and is not playable, so requiring
-    // it would make this certificate unobtainable. Add "fin-u3" here and in
-    // supabase/functions/generate-certificate/courses.ts when that unit ships.
-    episodes: ["fin-u1", "fin-u2", "fin-u4"],
+    episodes: ["fin-u1", "fin-u2", "fin-u3", "fin-u4"],
     templatePdf: "finance-certificate-template.pdf",
   },
   "cybersecurity": {

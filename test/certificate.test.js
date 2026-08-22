@@ -51,7 +51,7 @@ test("checkCourseCompletion returns null when course is only partially completed
   const userId = "partial_user_" + Date.now();
   completeEpisode(userId, "fin-u1", { earnedXp: 50, sceneId: "fin-u1-end" });
   completeEpisode(userId, "fin-u2", { earnedXp: 50, sceneId: "fin-u2-end" });
-  // fin-u4 is NOT completed.
+  // fin-u3 and fin-u4 are NOT completed.
 
   const result = checkCourseCompletion(userId, "fin-u2");
   assert.equal(result, null);
@@ -61,6 +61,7 @@ test("checkCourseCompletion returns course completion info ONLY when ALL episode
   const userId = "complete_user_" + Date.now();
   completeEpisode(userId, "fin-u1", { earnedXp: 50, sceneId: "fin-u1-end" });
   completeEpisode(userId, "fin-u2", { earnedXp: 50, sceneId: "fin-u2-end" });
+  completeEpisode(userId, "fin-u3", { earnedXp: 50, sceneId: "fin-u3-end" });
   completeEpisode(userId, "fin-u4", { earnedXp: 50, sceneId: "fin-u4-end" });
 
   const result = checkCourseCompletion(userId, "fin-u4");

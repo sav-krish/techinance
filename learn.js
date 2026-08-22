@@ -162,6 +162,7 @@ async function loadEpisodeMeta() {
       import("./content/cyber-unit4.js"),
       import("./content/finance-unit1.js"),
       import("./content/finance-unit2.js"),
+      import("./content/finance-unit3.js"),
       import("./content/finance-unit4.js"),
       import("./content/neuro-unit1.js"),
       import("./content/neuro-unit2.js"),

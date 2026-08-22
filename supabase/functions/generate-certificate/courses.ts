@@ -12,10 +12,7 @@ export const COURSE_REQUIREMENTS: Record<
 > = {
   "financial-literacy": {
     name: "Financial Literacy",
-    // Unit 3 (taxes) has never been written and is not playable, so requiring
-    // it would make this certificate unobtainable. Add "fin-u3" here the day
-    // that episode ships.
-    episodes: ["fin-u1", "fin-u2", "fin-u4"],
+    episodes: ["fin-u1", "fin-u2", "fin-u3", "fin-u4"],
   },
   cybersecurity: {
     name: "Cybersecurity",
