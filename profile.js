@@ -13,7 +13,7 @@
  * the page, or its sign-out button, from working.
  */
 
-import { initAuth, onAuthChange, signOut } from "./auth.js";
+import { getUser, initAuth, onAuthChange, signOut } from "./auth.js";
 import { icon } from "./icon.js";
 import { getProgress, resetEpisode } from "./progress.js";
 import { startProgressSync } from "./progress-sync.js";
@@ -643,6 +643,20 @@ function liveCourseCard(userId, course) {
     el("h3", "profile-course__title", course.title),
   );
   head.append(iconWrap, heading);
+
+  if (unitsDone >= course.units.length && course.units.length > 0) {
+    const certBtn = el("button", "profile-course__cert-btn", "🎓 Certificate");
+    certBtn.addEventListener("click", () => {
+      import("./certificate-generator.js").then((certMod) => {
+        certMod.showCertificateModal({
+          studentName: getUser()?.name || "Learner",
+          courseId: course.slug,
+          courseTitle: course.title,
+        });
+      });
+    });
+    head.append(certBtn);
+  }
 
   const unitWord = course.units.length === 1 ? "unit" : "units";
   const state = el(
