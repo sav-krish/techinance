@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ideas, interviews, and explainers from Techinance." />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://sav-krish.github.io/techinance/blogs.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Techinance" />
+    <meta property="og:title" content="Techinance Blog" />
+    <meta property="og:description" content="Ideas, interviews, and explainers from Techinance." />
+    <meta property="og:url" content="https://sav-krish.github.io/techinance/blogs.html" />
+    <title>Blog | Techinance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="blogs.css" />
+    <script type="module" src="nav.js"></script>
+    <script type="module" src="auth-nav.js"></script>
+    <script type="module" src="blog.js"></script>
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <nav class="navbar" aria-label="Primary navigation">
+        <a class="brand" href="./" aria-label="Techinance home">
+          <img class="brand__logo" src="logo.png" alt="" width="32" height="32" />
+          <span>Techinance</span>
+        </a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
+          <span>Menu</span><span class="menu-toggle__lines" aria-hidden="true"></span>
+        </button>
+        <div class="desktop-nav">
+          <a class="nav-link" href="courses.html">Learn</a>
+          <a class="nav-link" href="blogs.html" aria-current="page">Blogs</a>
+          <a class="nav-link" href="get-involved.html">Work with Us</a>
+          <a class="nav-link" href="contact.html">Contact Us</a>
+          <a class="nav-link" href="about.html">About</a>
+          <a class="nav-link" href="faqs.html">FAQs</a>
+          <div class="auth-slot" data-auth-nav></div>
+        </div>
+        <div class="mobile-nav" id="mobile-menu" data-mobile-menu>
+          <a href="courses.html">Learn</a>
+          <a href="blogs.html" aria-current="page">Blogs</a>
+          <a href="get-involved.html">Work with Us</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="about.html">About</a>
+          <a href="faqs.html">FAQs</a>
+          <a href="learn.html">My Learning</a>
+          <a href="leaderboard.html">Leaderboard</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page blog-page">
+      <section class="blog-hero" aria-labelledby="blog-title">
+        <div class="blog-hero__inner">
+          <p class="blog-eyebrow">Techinance journal</p>
+          <h1 id="blog-title">Curiosity, explained.</h1>
+          <p>Ideas, interviews, and practical guides about the technology and choices shaping our world.</p>
+        </div>
+      </section>
+      <section class="blog-feed" aria-labelledby="blog-feed-title">
+        <div class="blog-feed__inner">
+          <div class="blog-feed__heading">
+            <div>
+              <p class="blog-eyebrow">Latest thinking</p>
+              <h2 id="blog-feed-title">From the Techinance community</h2>
+            </div>
+            <a class="blog-editor-link" href="blog-admin.html">Editor sign in</a>
+          </div>
+          <p class="blog-status" data-blog-status role="status" aria-live="polite">Loading articles…</p>
+          <div class="blog-grid" data-blog-list aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div class="site-footer__brand">
+          <a class="site-footer__logo" href="./" aria-label="Techinance home"><img src="logo.png" alt="" width="32" height="32" /><span>Techinance</span></a>
+          <p>A registered 501(c)(3) nonprofit organization.</p>
+        </div>
+        <div class="site-footer__column"><h2>Quick Links</h2><a href="courses.html">Interactive Courses</a><a href="blogs.html">Blog</a><a href="faqs.html">FAQs</a></div>
+        <div class="site-footer__column"><h2>Work with Us</h2><a href="about.html">About</a><a href="get-involved.html">Work with Us</a><a href="contact.html">Contact Us</a><a href="learn.html">Story Mode</a></div>
+        <div class="site-footer__column"><h2>Legal</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a></div>
+        <div class="site-footer__column"><h2>Connect</h2><div class="site-footer__social"><a href="https://www.instagram.com/techinance/" aria-label="Techinance on Instagram" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a><a href="mailto:thetechinance@gmail.com" aria-label="Email Techinance"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2,2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a></div></div>
+      </div>
+      <div class="site-footer__bottom"><p>© 2026 Techinance. All rights reserved.</p></div>
+    </footer>
+  </body>
+</html>

@@ -18,6 +18,20 @@ The schema is safe to run again. It creates or updates:
 - `leaderboard()` which returns only opted-in aliases and aggregate totals
 - `reset_my_progress()` for an authenticated learner's own progress
 
+## Blog publishing
+
+After the base schema is in place, run
+[`supabase/migrations/20261011_blog_posts.sql`](supabase/migrations/20261011_blog_posts.sql)
+in the Supabase **SQL Editor**. It creates the public `blog_posts` table and
+its Row Level Security rules.
+
+The public may read only posts whose publication time has arrived. Creating,
+editing, deleting, and reading drafts are database-authorized only for
+confirmed accounts whose email is in the server-side editor list. The GitHub
+Pages site contains no admin password, service key, or browser-side email
+allowlist. New approved writers sign in through the normal Techinance account
+flow, then use `blog-admin.html` to publish or save a draft.
+
 ## 2. Configure Auth securely
 
 In **Authentication → Providers**:
